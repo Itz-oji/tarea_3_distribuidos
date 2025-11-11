@@ -10,6 +10,6 @@ message Response {
 
 service BrokerService {
     // Recibe una oferta de un productor
-    rpc SendOffer (Offer) returns (Response);
+    rpc SendOffer (Response) returns (Response);
 }
 
