@@ -1,0 +1,214 @@
+version: '3.9'
+
+services:
+  # ====================
+  # MV1
+  # ====================
+  RYW1:
+    build:
+      context: .
+      dockerfile: ./RYW1/Dockerfile.RYW1
+    container_name: RYW1
+    profiles: ["mv1"]
+    environment:
+      - NODE_ID=RYW1
+      - GRPC_PORT=51000
+      - PEERS=10.35.168.59:52000,10.35.168.59:57000
+      - N=3
+      - W=2
+      - R=2
+    restart: always
+    networks:
+      - red_global
+    ports:
+      - "51000:51000"
+
+  MR1:
+    build:
+      context: .
+      dockerfile: ./MR1/Dockerfile.MR1
+    container_name: MR1
+    profiles: ["mv1"]
+    environment:
+      - NODE_ID=MR1
+      - GRPC_PORT=52000
+      - PEERS=10.35.168.59:51000,10.35.168.59:57000
+      - N=3
+      - W=2
+      - R=2
+    networks:
+      - red_global
+    ports:
+      - "52000:52000"
+
+  datanode3:
+    build:
+      context: .
+      dockerfile: ./datanode3/Dockerfile.datanode3
+    container_name: datanode3
+    profiles: ["mv1"]
+    environment:
+      - NODE_ID=datanode3
+      - GRPC_PORT=57000
+      - PEERS=10.35.168.59:51000,10.35.168.59:52000
+      - N=3
+      - W=2
+      - R=2
+    networks:
+      - red_global
+    ports:
+      - "57000:57000"
+
+  broker:
+    build:
+      context: .
+      dockerfile: ./broker/Dockerfile.broker
+    container_name: broker
+    profiles: ["mv1"]
+    environment:
+      - SERVICE_NAME=broker
+      - GRPC_PORT=54000
+    ports:
+      - "55000:54000"
+    networks:
+      - red_global
+
+  # ====================
+  # MV2
+  # ====================
+  RYW2:
+    build:
+      context: .
+      dockerfile: ./RYW2/Dockerfile.RYW2
+    container_name: RYW2
+    profiles: ["mv2"]
+    environment:
+      - SERVICE_NAME=RYW2
+      - BROKER_HOST=10.35.168.62:55000
+    networks:
+      - red_global
+
+  MR2:
+    build:
+      context: .
+      dockerfile: ./MR2/Dockerfile.MR2
+    container_name: MR2
+    profiles: ["mv2"]
+    environment:
+      - SERVICE_NAME=MR2
+      - BROKER_HOST=10.35.168.62:55000
+    restart: always
+    networks:
+      - red_global
+
+  consenso1:
+    build:
+      context: .
+      dockerfile: ./consenso1/Dockerfile.consenso1
+    container_name: consenso1
+    profiles: ["mv2"]
+    environment:
+      - SERVICE_NAME=consenso1
+      - BROKER_HOST=10.35.168.62:55000
+    networks:
+      - red_global
+
+  # ====================
+  # MV3
+  # ====================
+  RYW3:
+    build:
+      context: .
+      dockerfile: ./RWY3/Dockerfile.RYW3
+    container_name: RYW3
+    profiles: ["mv3"]
+    environment:
+      - SERVICE_NAME=RYW3
+      - GRPC_PORT=51110
+      - DB_HOST=10.35.168.59:51000
+      - BROKER_HOST=10.35.168.62:54000
+    networks:
+      - red_global
+
+  datanode1:
+    build:
+      context: .
+      dockerfile: ./datanode1/Dockerfile.datanode1
+    container_name: datanode1
+    profiles: ["mv3"]
+    environment:
+      - SERVICE_NAME=datanode1
+      - GRPC_PORT=52220
+      - DB_HOST=10.35.168.59:52000
+      - BROKER_HOST=10.35.168.62:54000
+    networks:
+      - red_global
+
+  consenso2:
+    build:
+      context: .
+      dockerfile: ./consenso2/Dockerfile.consenso2
+    container_name: consenso2
+    profiles: ["mv3"]
+    environment:
+      - SERVICE_NAME=consenso2
+      - GRPC_PORT=57770
+      - DB_HOST=10.35.168.59:57000
+      - BROKER_HOST=10.35.168.62:54000
+    networks:
+      - red_global
+
+  # ====================
+  # MV4 - BROKER
+  # ====================
+  
+  coordinador:
+    build:
+      context: .
+      dockerfile: ./coordinador/Dockerfile.coordinador
+    container_name: coordinador
+    profiles: ["mv4"]
+    environment:
+      - SERVICE_NAME=coordinador
+      - GRPC_PORT=57770
+      - DB_HOST=10.35.168.59:57000
+      - BROKER_HOST=10.35.168.62:54000
+    networks:
+      - red_global
+
+  datanode2:
+    build:
+      context: .
+      dockerfile: ./datanode2/Dockerfile.datanode2
+    container_name: datanode2
+    profiles: ["mv4"]
+    environment:
+      - SERVICE_NAME=datanode2
+      - GRPC_PORT=57770
+      - DB_HOST=10.35.168.59:57000
+      - BROKER_HOST=10.35.168.62:54000
+    networks:
+      - red_global
+
+
+  consenso3:
+    build:
+      context: .
+      dockerfile: ./consenso3/Dockerfile.consenso3
+    container_name: consenso3
+    profiles: ["mv4"]
+    environment:
+      - SERVICE_NAME=consenso3
+      - GRPC_PORT=57770
+      - DB_HOST=10.35.168.59:57000
+      - BROKER_HOST=10.35.168.62:54000
+    networks:
+      - red_global
+
+
+# ====================
+# RED GLOBAL
+# ====================
+networks:
+  red_global:
+    driver: bridge

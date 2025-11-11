@@ -1,0 +1,27 @@
+
+#MV1 ejecucion
+- docker compose --profile mv1 up   # MV1: DB1 + DB2 + DB3
+
+#MV2 ejecucion
+- docker compose --profile mv2 up   # MV2: Consumidor1 + Consumidor2 + Consumidor3
+
+#MV3 ejecucion
+- docker compose --profile mv3 up   # MV3: Parisio + Riploy + Falabellox
+
+#MV4 ejecucion
+- docker compose --profile mv4 up   # MV4: Broker
+
+
+# ejecute esta linea para ver el archivo de las ofertas de consumidor:
+docker cp consumidor2:/app/offers/C2-1_historial.csv .
+
+broken: 54000
+DB1: 51000
+DB2: 52000
+BD3: 57000
+riploy: 51110
+falabellox: 52220
+parisio: 57770
+consumidor1: 54100
+consumidor2: 51100
+consumidor3: 52200

@@ -1,0 +1,15 @@
+FROM golang:1.24 AS builder
+WORKDIR /app
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY proto ./proto
+COPY datanode2 ./
+RUN go build -o datanode2 datanode2.go
+
+FROM gcr.io/distroless/base-debian12
+WORKDIR /app
+COPY --from=builder /app/datanode2 ./
+
+CMD ["./datanode2"]

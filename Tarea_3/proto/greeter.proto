@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package heint;
+
+option go_package = "/proto";
+
+message Response {
+    string mensaje = 1;
+}
+
+service BrokerService {
+    // Recibe una oferta de un productor
+    rpc SendOffer (Offer) returns (Response);
+}
+

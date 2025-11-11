@@ -1,0 +1,15 @@
+FROM golang:1.24 AS builder
+WORKDIR /app
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY proto ./proto
+COPY consenso2 ./
+RUN go build -o consenso2 consenso2.go
+
+FROM gcr.io/distroless/base-debian12
+WORKDIR /app
+COPY --from=builder /app/consenso2 ./
+
+CMD ["./consenso2"]
