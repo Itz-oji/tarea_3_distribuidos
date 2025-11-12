@@ -23,7 +23,7 @@ const (
 
 type Response struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Mensaje       string                 `protobuf:"bytes,1,opt,name=mensaje,proto3" json:"mensaje,omitempty"`
+	NodoID        string                 `protobuf:"bytes,1,opt,name=nodoID,proto3" json:"nodoID,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -58,16 +58,16 @@ func (*Response) Descriptor() ([]byte, []int) {
 	return file_proto_greeter_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *Response) GetMensaje() string {
+func (x *Response) GetNodoID() string {
 	if x != nil {
-		return x.Mensaje
+		return x.NodoID
 	}
 	return ""
 }
 
 type Estado struct {
 	state               protoimpl.MessageState `protogen:"open.v1"`
-	Id                  int32                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	Id                  string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	AsientosDisponibles map[string]bool        `protobuf:"bytes,2,rep,name=asientos_disponibles,json=asientosDisponibles,proto3" json:"asientos_disponibles,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
 	unknownFields       protoimpl.UnknownFields
 	sizeCache           protoimpl.SizeCache
@@ -103,11 +103,11 @@ func (*Estado) Descriptor() ([]byte, []int) {
 	return file_proto_greeter_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *Estado) GetId() int32 {
+func (x *Estado) GetId() string {
 	if x != nil {
 		return x.Id
 	}
-	return 0
+	return ""
 }
 
 func (x *Estado) GetAsientosDisponibles() map[string]bool {
@@ -121,11 +121,11 @@ var File_proto_greeter_proto protoreflect.FileDescriptor
 
 const file_proto_greeter_proto_rawDesc = "" +
 	"\n" +
-	"\x13proto/greeter.proto\x12\x05heint\"$\n" +
-	"\bResponse\x12\x18\n" +
-	"\amensaje\x18\x01 \x01(\tR\amensaje\"\xbb\x01\n" +
+	"\x13proto/greeter.proto\x12\x05heint\"\"\n" +
+	"\bResponse\x12\x16\n" +
+	"\x06nodoID\x18\x01 \x01(\tR\x06nodoID\"\xbb\x01\n" +
 	"\x06Estado\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\x05R\x02id\x12Y\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12Y\n" +
 	"\x14asientos_disponibles\x18\x02 \x03(\v2&.heint.Estado.AsientosDisponiblesEntryR\x13asientosDisponibles\x1aF\n" +
 	"\x18AsientosDisponiblesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
@@ -133,7 +133,7 @@ const file_proto_greeter_proto_rawDesc = "" +
 	"\rBrokerService\x12-\n" +
 	"\tSendOffer\x12\x0f.heint.Response\x1a\x0f.heint.Response\x12,\n" +
 	"\n" +
-	"SendEstado\x12\x0f.heint.Response\x1a\r.heint.EstadoB\bZ\x06/protob\x06proto3"
+	"SendEstado\x12\x0f.heint.Response\x1a\r.heint.EstadoB\x13Z\x11heint/proto;protob\x06proto3"
 
 var (
 	file_proto_greeter_proto_rawDescOnce sync.Once

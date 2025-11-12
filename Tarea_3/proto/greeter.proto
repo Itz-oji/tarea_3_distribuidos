@@ -2,14 +2,18 @@ syntax = "proto3";
 
 package heint;
 
-option go_package = "/proto";
+option go_package = "heint/proto;proto";
 
 message Response {
-    string mensaje = 1;
+    string nodoID = 1;
 }
-
+message Estado {
+    string id = 1;
+    map<string, bool> asientos_disponibles = 2;    
+}
 service BrokerService {
     // Recibe una oferta de un productor
     rpc SendOffer (Response) returns (Response);
+    rpc SendEstado (Response) returns (Estado);
 }
 

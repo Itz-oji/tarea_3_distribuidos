@@ -1,8 +1,8 @@
-module example1
+module heint
 
 go 1.24.0
 
-toolchain go1.24.9
+toolchain go1.24.10
 
 require (
 	google.golang.org/grpc v1.76.0

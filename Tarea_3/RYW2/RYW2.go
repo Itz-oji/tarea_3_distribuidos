@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math/rand"
 	"net"
+	"os"
 	"sync"
 	"time"
 
@@ -13,99 +15,47 @@ import (
 	"google.golang.org/grpc"
 )
 
-const (
-	// La dirección del servidor Lester   = "10.35.168.59:50051"
-	// La dirección del servidor Franklin = "10.35.168.60:50052"
-	// La dirección del servidor Trevor   = "10.35.168.61:50053"
-
-	DB1Addr = "10.35.168.59:51000"
-	DB3Addr = "10.35.168.59:57000"
-)
-
-// NodoDB representa un nodo de base de datos
-type NodoDB struct {
-	proto.UnimplementedBrokerServiceServer
-	mu     sync.Mutex
-	offers map[string]proto.Offer // Mapa para almacenar las ofertas
-	nodeID string                 // Identificador del nodo
+type Node struct {
+	nodeID string
+	brokerAddr string
 }
 
-func (n *NodoDB) SendOffer(ctx context.Context, offer *proto.Offer) (*proto.Response, error) {
-	n.mu.Lock()
-	defer n.mu.Unlock()
-
-	// Almacenar la oferta en el nodo
-	n.offers[offer.OfertaId] = *offer
-
-	// Responder al broker con un mensaje de confirmación
-	response := &proto.Response{
-		Mensaje: fmt.Sprintf("ACK: Oferta %s almacenada en %s", offer.OfertaId, n.nodeID),
-	}
-	return response, nil
-}
-
-func (n *NodoDB) GetHistory(ctx context.Context, req *proto.HistoryRequest) (*proto.HistoryResponse, error) {
-	n.mu.Lock()
-	defer n.mu.Unlock()
-
-	// Devolver todas las ofertas almacenadas en este nodo
-	var offers []*proto.Offer
-	for _, offer := range n.offers {
-		o := offer
-		offers = append(offers, &o)
+func(n *Node) EstadoSistema() {
+	conn, err := grpc.Dial(n.brokerAddr, grpc.WithInsecure())
+	if err != nil {
+		log.Printf("[%s] Error al conectar con coordinador: %v", n.nodeID, err)
+		return
 	}
 
-	response := &proto.HistoryResponse{
-		Offers: offers,
+	defer conn.Close()
+
+	client := proto.NewBrokerServiceClient(conn)
+
+	resp, err := client.SendEstado(context.Background(), &proto.Response{Mensaje: "RYW2"})
+	if err != nil {
+		log.Printf("[%s] Error al consultar estado del sistema: %v", n.nodeID, err)
+		return
 	}
-	return response, nil
+
+	log.Printf("[%s] Estado del sistema recibido (ID=%d):", n.nodeID, resp.Id)
+	for asiento, disponible := range resp.AsientosDisponibles {
+		estado := "Ocupado"
+		if disponible {
+			estado = "Libre"
+		}
+		log.Printf("  → %s: %s", asiento, estado)
+	}
 }
 
 func main() {
-	server := grpc.NewServer()
-
-	nodo := &NodoDB{
-		nodeID: "DB2",
-		offers: make(map[string]proto.Offer),
+	nodo := &Node{
+		nodeID: "RYW2",
+		brokerAddr: "localhost:54000",
 	}
 
-	// Registrar el servidor del nodo
-	proto.RegisterBrokerServiceServer(server, nodo)
-
-	go func() {
-		time.Sleep(500 * time.Millisecond)
-		peers := []string{DB1Addr, DB3Addr}
-		for _, p := range peers {
-			cctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-			conn, err := grpc.DialContext(cctx, p, grpc.WithInsecure())
-			cancel()
-			if err != nil {
-				continue
-			}
-			client := proto.NewBrokerServiceClient(conn)
-			ctx, cancel2 := context.WithTimeout(context.Background(), 2*time.Second)
-			resp, err := client.GetHistory(ctx, &proto.HistoryRequest{ConsumidorId: "sync"})
-			cancel2()
-			_ = conn.Close()
-			if err != nil || resp == nil {
-				continue
-			}
-			nodo.mu.Lock()
-			for _, of := range resp.Offers {
-				nodo.offers[of.OfertaId] = *of
-			}
-			nodo.mu.Unlock()
-		}
-	}()
-
-	listener, err := net.Listen("tcp", ":52000")
-	if err != nil {
-		log.Fatalf("Error al escuchar en el puerto: %v", err)
-	}
-
-	fmt.Printf("Nodo %s escuchando en el puerto 52000...\n", nodo.nodeID)
-	if err := server.Serve(listener); err != nil {
-		log.Fatalf("Error al iniciar el servidor: %v", err)
+	for {
+		nodo.EstadoSistema()
+		time.Sleep(5 * time.Second)
 	}
 }
 

@@ -4,7 +4,7 @@ services:
   # ====================
   # MV1
   # ====================
-  RYW1:
+  ryw1:
     build:
       context: .
       dockerfile: ./RYW1/Dockerfile.RYW1
@@ -13,10 +13,6 @@ services:
     environment:
       - NODE_ID=RYW1
       - GRPC_PORT=51000
-      - PEERS=10.35.168.59:52000,10.35.168.59:57000
-      - N=3
-      - W=2
-      - R=2
     restart: always
     networks:
       - red_global
@@ -170,9 +166,9 @@ services:
     profiles: ["mv4"]
     environment:
       - SERVICE_NAME=coordinador
-      - GRPC_PORT=57770
-      - DB_HOST=10.35.168.59:57000
-      - BROKER_HOST=10.35.168.62:54000
+      - GRPC_PORT=54000
+    ports:
+      - "54000:54000"
     networks:
       - red_global
 

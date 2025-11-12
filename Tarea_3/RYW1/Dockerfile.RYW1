@@ -5,10 +5,10 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY proto ./proto
-COPY RYW1 ./
-RUN go build -o RYW1 .
+COPY RYW1 ./RYW1
+RUN go build -o ryw1 ./RYW1/RYW1.go
 
 FROM gcr.io/distroless/base-debian12
 WORKDIR /app
-COPY --from=builder /app/RYW1 .
-CMD ["./RYW1"]
+COPY --from=builder /app/ryw1 .
+CMD ["./ryw1"]
