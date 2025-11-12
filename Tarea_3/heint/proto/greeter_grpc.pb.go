@@ -19,8 +19,10 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	BrokerService_SendOffer_FullMethodName  = "/heint.BrokerService/SendOffer"
-	BrokerService_SendEstado_FullMethodName = "/heint.BrokerService/SendEstado"
+	BrokerService_SendOffer_FullMethodName   = "/heint.BrokerService/SendOffer"
+	BrokerService_SendEstado_FullMethodName  = "/heint.BrokerService/SendEstado"
+	BrokerService_SendReserva_FullMethodName = "/heint.BrokerService/SendReserva"
+	BrokerService_SendBaggage_FullMethodName = "/heint.BrokerService/SendBaggage"
 )
 
 // BrokerServiceClient is the client API for BrokerService service.
@@ -30,6 +32,8 @@ type BrokerServiceClient interface {
 	// Recibe una oferta de un productor
 	SendOffer(ctx context.Context, in *Response, opts ...grpc.CallOption) (*Response, error)
 	SendEstado(ctx context.Context, in *Response, opts ...grpc.CallOption) (*Estado, error)
+	SendReserva(ctx context.Context, in *AsientoSelect, opts ...grpc.CallOption) (*Response, error)
+	SendBaggage(ctx context.Context, in *FactBaggage, opts ...grpc.CallOption) (*Response, error)
 }
 
 type brokerServiceClient struct {
@@ -60,6 +64,26 @@ func (c *brokerServiceClient) SendEstado(ctx context.Context, in *Response, opts
 	return out, nil
 }
 
+func (c *brokerServiceClient) SendReserva(ctx context.Context, in *AsientoSelect, opts ...grpc.CallOption) (*Response, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Response)
+	err := c.cc.Invoke(ctx, BrokerService_SendReserva_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *brokerServiceClient) SendBaggage(ctx context.Context, in *FactBaggage, opts ...grpc.CallOption) (*Response, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Response)
+	err := c.cc.Invoke(ctx, BrokerService_SendBaggage_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // BrokerServiceServer is the server API for BrokerService service.
 // All implementations must embed UnimplementedBrokerServiceServer
 // for forward compatibility.
@@ -67,6 +91,8 @@ type BrokerServiceServer interface {
 	// Recibe una oferta de un productor
 	SendOffer(context.Context, *Response) (*Response, error)
 	SendEstado(context.Context, *Response) (*Estado, error)
+	SendReserva(context.Context, *AsientoSelect) (*Response, error)
+	SendBaggage(context.Context, *FactBaggage) (*Response, error)
 	mustEmbedUnimplementedBrokerServiceServer()
 }
 
@@ -82,6 +108,12 @@ func (UnimplementedBrokerServiceServer) SendOffer(context.Context, *Response) (*
 }
 func (UnimplementedBrokerServiceServer) SendEstado(context.Context, *Response) (*Estado, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SendEstado not implemented")
+}
+func (UnimplementedBrokerServiceServer) SendReserva(context.Context, *AsientoSelect) (*Response, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SendReserva not implemented")
+}
+func (UnimplementedBrokerServiceServer) SendBaggage(context.Context, *FactBaggage) (*Response, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SendBaggage not implemented")
 }
 func (UnimplementedBrokerServiceServer) mustEmbedUnimplementedBrokerServiceServer() {}
 func (UnimplementedBrokerServiceServer) testEmbeddedByValue()                       {}
@@ -140,6 +172,42 @@ func _BrokerService_SendEstado_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _BrokerService_SendReserva_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AsientoSelect)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BrokerServiceServer).SendReserva(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BrokerService_SendReserva_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BrokerServiceServer).SendReserva(ctx, req.(*AsientoSelect))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _BrokerService_SendBaggage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(FactBaggage)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BrokerServiceServer).SendBaggage(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BrokerService_SendBaggage_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BrokerServiceServer).SendBaggage(ctx, req.(*FactBaggage))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // BrokerService_ServiceDesc is the grpc.ServiceDesc for BrokerService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -154,6 +222,14 @@ var BrokerService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SendEstado",
 			Handler:    _BrokerService_SendEstado_Handler,
+		},
+		{
+			MethodName: "SendReserva",
+			Handler:    _BrokerService_SendReserva_Handler,
+		},
+		{
+			MethodName: "SendBaggage",
+			Handler:    _BrokerService_SendBaggage_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

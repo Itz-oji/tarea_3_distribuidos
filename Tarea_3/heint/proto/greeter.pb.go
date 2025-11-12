@@ -65,6 +65,110 @@ func (x *Response) GetNodoID() string {
 	return ""
 }
 
+type AsientoSelect struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	AsientoID     string                 `protobuf:"bytes,1,opt,name=asientoID,proto3" json:"asientoID,omitempty"`
+	Asiento       string                 `protobuf:"bytes,2,opt,name=asiento,proto3" json:"asiento,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AsientoSelect) Reset() {
+	*x = AsientoSelect{}
+	mi := &file_proto_greeter_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AsientoSelect) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AsientoSelect) ProtoMessage() {}
+
+func (x *AsientoSelect) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_greeter_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AsientoSelect.ProtoReflect.Descriptor instead.
+func (*AsientoSelect) Descriptor() ([]byte, []int) {
+	return file_proto_greeter_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *AsientoSelect) GetAsientoID() string {
+	if x != nil {
+		return x.AsientoID
+	}
+	return ""
+}
+
+func (x *AsientoSelect) GetAsiento() string {
+	if x != nil {
+		return x.Asiento
+	}
+	return ""
+}
+
+type FactBaggage struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	BaggageID     string                 `protobuf:"bytes,1,opt,name=BaggageID,proto3" json:"BaggageID,omitempty"`
+	Baggage       string                 `protobuf:"bytes,2,opt,name=Baggage,proto3" json:"Baggage,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FactBaggage) Reset() {
+	*x = FactBaggage{}
+	mi := &file_proto_greeter_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FactBaggage) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FactBaggage) ProtoMessage() {}
+
+func (x *FactBaggage) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_greeter_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FactBaggage.ProtoReflect.Descriptor instead.
+func (*FactBaggage) Descriptor() ([]byte, []int) {
+	return file_proto_greeter_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *FactBaggage) GetBaggageID() string {
+	if x != nil {
+		return x.BaggageID
+	}
+	return ""
+}
+
+func (x *FactBaggage) GetBaggage() string {
+	if x != nil {
+		return x.Baggage
+	}
+	return ""
+}
+
 type Estado struct {
 	state               protoimpl.MessageState `protogen:"open.v1"`
 	Id                  string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -75,7 +179,7 @@ type Estado struct {
 
 func (x *Estado) Reset() {
 	*x = Estado{}
-	mi := &file_proto_greeter_proto_msgTypes[1]
+	mi := &file_proto_greeter_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -87,7 +191,7 @@ func (x *Estado) String() string {
 func (*Estado) ProtoMessage() {}
 
 func (x *Estado) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_greeter_proto_msgTypes[1]
+	mi := &file_proto_greeter_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -100,7 +204,7 @@ func (x *Estado) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Estado.ProtoReflect.Descriptor instead.
 func (*Estado) Descriptor() ([]byte, []int) {
-	return file_proto_greeter_proto_rawDescGZIP(), []int{1}
+	return file_proto_greeter_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *Estado) GetId() string {
@@ -123,17 +227,25 @@ const file_proto_greeter_proto_rawDesc = "" +
 	"\n" +
 	"\x13proto/greeter.proto\x12\x05heint\"\"\n" +
 	"\bResponse\x12\x16\n" +
-	"\x06nodoID\x18\x01 \x01(\tR\x06nodoID\"\xbb\x01\n" +
+	"\x06nodoID\x18\x01 \x01(\tR\x06nodoID\"G\n" +
+	"\rAsientoSelect\x12\x1c\n" +
+	"\tasientoID\x18\x01 \x01(\tR\tasientoID\x12\x18\n" +
+	"\aasiento\x18\x02 \x01(\tR\aasiento\"E\n" +
+	"\vFactBaggage\x12\x1c\n" +
+	"\tBaggageID\x18\x01 \x01(\tR\tBaggageID\x12\x18\n" +
+	"\aBaggage\x18\x02 \x01(\tR\aBaggage\"\xbb\x01\n" +
 	"\x06Estado\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12Y\n" +
 	"\x14asientos_disponibles\x18\x02 \x03(\v2&.heint.Estado.AsientosDisponiblesEntryR\x13asientosDisponibles\x1aF\n" +
 	"\x18AsientosDisponiblesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\bR\x05value:\x028\x012l\n" +
+	"\x05value\x18\x02 \x01(\bR\x05value:\x028\x012\xd6\x01\n" +
 	"\rBrokerService\x12-\n" +
 	"\tSendOffer\x12\x0f.heint.Response\x1a\x0f.heint.Response\x12,\n" +
 	"\n" +
-	"SendEstado\x12\x0f.heint.Response\x1a\r.heint.EstadoB\x13Z\x11heint/proto;protob\x06proto3"
+	"SendEstado\x12\x0f.heint.Response\x1a\r.heint.Estado\x124\n" +
+	"\vSendReserva\x12\x14.heint.AsientoSelect\x1a\x0f.heint.Response\x122\n" +
+	"\vSendBaggage\x12\x12.heint.FactBaggage\x1a\x0f.heint.ResponseB\x13Z\x11heint/proto;protob\x06proto3"
 
 var (
 	file_proto_greeter_proto_rawDescOnce sync.Once
@@ -147,20 +259,26 @@ func file_proto_greeter_proto_rawDescGZIP() []byte {
 	return file_proto_greeter_proto_rawDescData
 }
 
-var file_proto_greeter_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_proto_greeter_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_proto_greeter_proto_goTypes = []any{
-	(*Response)(nil), // 0: heint.Response
-	(*Estado)(nil),   // 1: heint.Estado
-	nil,              // 2: heint.Estado.AsientosDisponiblesEntry
+	(*Response)(nil),      // 0: heint.Response
+	(*AsientoSelect)(nil), // 1: heint.AsientoSelect
+	(*FactBaggage)(nil),   // 2: heint.FactBaggage
+	(*Estado)(nil),        // 3: heint.Estado
+	nil,                   // 4: heint.Estado.AsientosDisponiblesEntry
 }
 var file_proto_greeter_proto_depIdxs = []int32{
-	2, // 0: heint.Estado.asientos_disponibles:type_name -> heint.Estado.AsientosDisponiblesEntry
+	4, // 0: heint.Estado.asientos_disponibles:type_name -> heint.Estado.AsientosDisponiblesEntry
 	0, // 1: heint.BrokerService.SendOffer:input_type -> heint.Response
 	0, // 2: heint.BrokerService.SendEstado:input_type -> heint.Response
-	0, // 3: heint.BrokerService.SendOffer:output_type -> heint.Response
-	1, // 4: heint.BrokerService.SendEstado:output_type -> heint.Estado
-	3, // [3:5] is the sub-list for method output_type
-	1, // [1:3] is the sub-list for method input_type
+	1, // 3: heint.BrokerService.SendReserva:input_type -> heint.AsientoSelect
+	2, // 4: heint.BrokerService.SendBaggage:input_type -> heint.FactBaggage
+	0, // 5: heint.BrokerService.SendOffer:output_type -> heint.Response
+	3, // 6: heint.BrokerService.SendEstado:output_type -> heint.Estado
+	0, // 7: heint.BrokerService.SendReserva:output_type -> heint.Response
+	0, // 8: heint.BrokerService.SendBaggage:output_type -> heint.Response
+	5, // [5:9] is the sub-list for method output_type
+	1, // [1:5] is the sub-list for method input_type
 	1, // [1:1] is the sub-list for extension type_name
 	1, // [1:1] is the sub-list for extension extendee
 	0, // [0:1] is the sub-list for field type_name
@@ -177,7 +295,7 @@ func file_proto_greeter_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_greeter_proto_rawDesc), len(file_proto_greeter_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   3,
+			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -7,6 +7,14 @@ option go_package = "heint/proto;proto";
 message Response {
     string nodoID = 1;
 }
+message AsientoSelect {
+    string asientoID = 1;
+    string asiento =2;
+}
+message FactBaggage {
+    string BaggageID = 1;
+    string Baggage = 2;
+}
 message Estado {
     string id = 1;
     map<string, bool> asientos_disponibles = 2;    
@@ -15,5 +23,7 @@ service BrokerService {
     // Recibe una oferta de un productor
     rpc SendOffer (Response) returns (Response);
     rpc SendEstado (Response) returns (Estado);
+    rpc SendReserva (AsientoSelect) returns (Response);
+    rpc SendBaggage (FactBaggage) returns (Response);
 }
 
