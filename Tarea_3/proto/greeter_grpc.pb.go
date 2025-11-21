@@ -19,8 +19,11 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	BrokerService_SendOffer_FullMethodName  = "/heint.BrokerService/SendOffer"
-	BrokerService_SendEstado_FullMethodName = "/heint.BrokerService/SendEstado"
+	BrokerService_SendOffer_FullMethodName                = "/heint.BrokerService/SendOffer"
+	BrokerService_SendEstado_FullMethodName               = "/heint.BrokerService/SendEstado"
+	BrokerService_SendReserva_FullMethodName              = "/heint.BrokerService/SendReserva"
+	BrokerService_SendBaggage_FullMethodName              = "/heint.BrokerService/SendBaggage"
+	BrokerService_ObtenerEstadoYAsignacion_FullMethodName = "/heint.BrokerService/ObtenerEstadoYAsignacion"
 )
 
 // BrokerServiceClient is the client API for BrokerService service.
@@ -30,6 +33,9 @@ type BrokerServiceClient interface {
 	// Recibe una oferta de un productor
 	SendOffer(ctx context.Context, in *Response, opts ...grpc.CallOption) (*Response, error)
 	SendEstado(ctx context.Context, in *Response, opts ...grpc.CallOption) (*Estado, error)
+	SendReserva(ctx context.Context, in *AsientoSelect, opts ...grpc.CallOption) (*Response, error)
+	SendBaggage(ctx context.Context, in *FactBaggage, opts ...grpc.CallOption) (*Response, error)
+	ObtenerEstadoYAsignacion(ctx context.Context, in *SolicitudEstado, opts ...grpc.CallOption) (*ResponseEstadoAsignado, error)
 }
 
 type brokerServiceClient struct {
@@ -60,6 +66,36 @@ func (c *brokerServiceClient) SendEstado(ctx context.Context, in *Response, opts
 	return out, nil
 }
 
+func (c *brokerServiceClient) SendReserva(ctx context.Context, in *AsientoSelect, opts ...grpc.CallOption) (*Response, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Response)
+	err := c.cc.Invoke(ctx, BrokerService_SendReserva_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *brokerServiceClient) SendBaggage(ctx context.Context, in *FactBaggage, opts ...grpc.CallOption) (*Response, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Response)
+	err := c.cc.Invoke(ctx, BrokerService_SendBaggage_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *brokerServiceClient) ObtenerEstadoYAsignacion(ctx context.Context, in *SolicitudEstado, opts ...grpc.CallOption) (*ResponseEstadoAsignado, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ResponseEstadoAsignado)
+	err := c.cc.Invoke(ctx, BrokerService_ObtenerEstadoYAsignacion_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // BrokerServiceServer is the server API for BrokerService service.
 // All implementations must embed UnimplementedBrokerServiceServer
 // for forward compatibility.
@@ -67,6 +103,9 @@ type BrokerServiceServer interface {
 	// Recibe una oferta de un productor
 	SendOffer(context.Context, *Response) (*Response, error)
 	SendEstado(context.Context, *Response) (*Estado, error)
+	SendReserva(context.Context, *AsientoSelect) (*Response, error)
+	SendBaggage(context.Context, *FactBaggage) (*Response, error)
+	ObtenerEstadoYAsignacion(context.Context, *SolicitudEstado) (*ResponseEstadoAsignado, error)
 	mustEmbedUnimplementedBrokerServiceServer()
 }
 
@@ -82,6 +121,15 @@ func (UnimplementedBrokerServiceServer) SendOffer(context.Context, *Response) (*
 }
 func (UnimplementedBrokerServiceServer) SendEstado(context.Context, *Response) (*Estado, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SendEstado not implemented")
+}
+func (UnimplementedBrokerServiceServer) SendReserva(context.Context, *AsientoSelect) (*Response, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SendReserva not implemented")
+}
+func (UnimplementedBrokerServiceServer) SendBaggage(context.Context, *FactBaggage) (*Response, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SendBaggage not implemented")
+}
+func (UnimplementedBrokerServiceServer) ObtenerEstadoYAsignacion(context.Context, *SolicitudEstado) (*ResponseEstadoAsignado, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ObtenerEstadoYAsignacion not implemented")
 }
 func (UnimplementedBrokerServiceServer) mustEmbedUnimplementedBrokerServiceServer() {}
 func (UnimplementedBrokerServiceServer) testEmbeddedByValue()                       {}
@@ -140,6 +188,60 @@ func _BrokerService_SendEstado_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _BrokerService_SendReserva_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AsientoSelect)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BrokerServiceServer).SendReserva(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BrokerService_SendReserva_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BrokerServiceServer).SendReserva(ctx, req.(*AsientoSelect))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _BrokerService_SendBaggage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(FactBaggage)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BrokerServiceServer).SendBaggage(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BrokerService_SendBaggage_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BrokerServiceServer).SendBaggage(ctx, req.(*FactBaggage))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _BrokerService_ObtenerEstadoYAsignacion_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SolicitudEstado)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BrokerServiceServer).ObtenerEstadoYAsignacion(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BrokerService_ObtenerEstadoYAsignacion_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BrokerServiceServer).ObtenerEstadoYAsignacion(ctx, req.(*SolicitudEstado))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // BrokerService_ServiceDesc is the grpc.ServiceDesc for BrokerService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -154,6 +256,298 @@ var BrokerService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SendEstado",
 			Handler:    _BrokerService_SendEstado_Handler,
+		},
+		{
+			MethodName: "SendReserva",
+			Handler:    _BrokerService_SendReserva_Handler,
+		},
+		{
+			MethodName: "SendBaggage",
+			Handler:    _BrokerService_SendBaggage_Handler,
+		},
+		{
+			MethodName: "ObtenerEstadoYAsignacion",
+			Handler:    _BrokerService_ObtenerEstadoYAsignacion_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "proto/greeter.proto",
+}
+
+const (
+	DataNodeService_ObtenerEstado_FullMethodName   = "/heint.DataNodeService/ObtenerEstado"
+	DataNodeService_EscribirReserva_FullMethodName = "/heint.DataNodeService/EscribirReserva"
+)
+
+// DataNodeServiceClient is the client API for DataNodeService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type DataNodeServiceClient interface {
+	ObtenerEstado(ctx context.Context, in *SolicitudEstado, opts ...grpc.CallOption) (*ResponseEstadoAsignado, error)
+	EscribirReserva(ctx context.Context, in *AsientoSelect, opts ...grpc.CallOption) (*Response, error)
+}
+
+type dataNodeServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewDataNodeServiceClient(cc grpc.ClientConnInterface) DataNodeServiceClient {
+	return &dataNodeServiceClient{cc}
+}
+
+func (c *dataNodeServiceClient) ObtenerEstado(ctx context.Context, in *SolicitudEstado, opts ...grpc.CallOption) (*ResponseEstadoAsignado, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ResponseEstadoAsignado)
+	err := c.cc.Invoke(ctx, DataNodeService_ObtenerEstado_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dataNodeServiceClient) EscribirReserva(ctx context.Context, in *AsientoSelect, opts ...grpc.CallOption) (*Response, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Response)
+	err := c.cc.Invoke(ctx, DataNodeService_EscribirReserva_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// DataNodeServiceServer is the server API for DataNodeService service.
+// All implementations must embed UnimplementedDataNodeServiceServer
+// for forward compatibility.
+type DataNodeServiceServer interface {
+	ObtenerEstado(context.Context, *SolicitudEstado) (*ResponseEstadoAsignado, error)
+	EscribirReserva(context.Context, *AsientoSelect) (*Response, error)
+	mustEmbedUnimplementedDataNodeServiceServer()
+}
+
+// UnimplementedDataNodeServiceServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedDataNodeServiceServer struct{}
+
+func (UnimplementedDataNodeServiceServer) ObtenerEstado(context.Context, *SolicitudEstado) (*ResponseEstadoAsignado, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ObtenerEstado not implemented")
+}
+func (UnimplementedDataNodeServiceServer) EscribirReserva(context.Context, *AsientoSelect) (*Response, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method EscribirReserva not implemented")
+}
+func (UnimplementedDataNodeServiceServer) mustEmbedUnimplementedDataNodeServiceServer() {}
+func (UnimplementedDataNodeServiceServer) testEmbeddedByValue()                         {}
+
+// UnsafeDataNodeServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to DataNodeServiceServer will
+// result in compilation errors.
+type UnsafeDataNodeServiceServer interface {
+	mustEmbedUnimplementedDataNodeServiceServer()
+}
+
+func RegisterDataNodeServiceServer(s grpc.ServiceRegistrar, srv DataNodeServiceServer) {
+	// If the following call pancis, it indicates UnimplementedDataNodeServiceServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&DataNodeService_ServiceDesc, srv)
+}
+
+func _DataNodeService_ObtenerEstado_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SolicitudEstado)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DataNodeServiceServer).ObtenerEstado(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DataNodeService_ObtenerEstado_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DataNodeServiceServer).ObtenerEstado(ctx, req.(*SolicitudEstado))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DataNodeService_EscribirReserva_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AsientoSelect)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DataNodeServiceServer).EscribirReserva(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DataNodeService_EscribirReserva_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DataNodeServiceServer).EscribirReserva(ctx, req.(*AsientoSelect))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// DataNodeService_ServiceDesc is the grpc.ServiceDesc for DataNodeService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var DataNodeService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "heint.DataNodeService",
+	HandlerType: (*DataNodeServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "ObtenerEstado",
+			Handler:    _DataNodeService_ObtenerEstado_Handler,
+		},
+		{
+			MethodName: "EscribirReserva",
+			Handler:    _DataNodeService_EscribirReserva_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "proto/greeter.proto",
+}
+
+const (
+	AsignadorService_AsignarDataNode_FullMethodName          = "/heint.AsignadorService/AsignarDataNode"
+	AsignadorService_ObtenerEstadoYAsignacion_FullMethodName = "/heint.AsignadorService/ObtenerEstadoYAsignacion"
+)
+
+// AsignadorServiceClient is the client API for AsignadorService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type AsignadorServiceClient interface {
+	AsignarDataNode(ctx context.Context, in *RequestAsignar, opts ...grpc.CallOption) (*ResponseAsignar, error)
+	ObtenerEstadoYAsignacion(ctx context.Context, in *SolicitudEstado, opts ...grpc.CallOption) (*ResponseEstadoAsignado, error)
+}
+
+type asignadorServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewAsignadorServiceClient(cc grpc.ClientConnInterface) AsignadorServiceClient {
+	return &asignadorServiceClient{cc}
+}
+
+func (c *asignadorServiceClient) AsignarDataNode(ctx context.Context, in *RequestAsignar, opts ...grpc.CallOption) (*ResponseAsignar, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ResponseAsignar)
+	err := c.cc.Invoke(ctx, AsignadorService_AsignarDataNode_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *asignadorServiceClient) ObtenerEstadoYAsignacion(ctx context.Context, in *SolicitudEstado, opts ...grpc.CallOption) (*ResponseEstadoAsignado, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ResponseEstadoAsignado)
+	err := c.cc.Invoke(ctx, AsignadorService_ObtenerEstadoYAsignacion_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// AsignadorServiceServer is the server API for AsignadorService service.
+// All implementations must embed UnimplementedAsignadorServiceServer
+// for forward compatibility.
+type AsignadorServiceServer interface {
+	AsignarDataNode(context.Context, *RequestAsignar) (*ResponseAsignar, error)
+	ObtenerEstadoYAsignacion(context.Context, *SolicitudEstado) (*ResponseEstadoAsignado, error)
+	mustEmbedUnimplementedAsignadorServiceServer()
+}
+
+// UnimplementedAsignadorServiceServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedAsignadorServiceServer struct{}
+
+func (UnimplementedAsignadorServiceServer) AsignarDataNode(context.Context, *RequestAsignar) (*ResponseAsignar, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AsignarDataNode not implemented")
+}
+func (UnimplementedAsignadorServiceServer) ObtenerEstadoYAsignacion(context.Context, *SolicitudEstado) (*ResponseEstadoAsignado, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ObtenerEstadoYAsignacion not implemented")
+}
+func (UnimplementedAsignadorServiceServer) mustEmbedUnimplementedAsignadorServiceServer() {}
+func (UnimplementedAsignadorServiceServer) testEmbeddedByValue()                          {}
+
+// UnsafeAsignadorServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to AsignadorServiceServer will
+// result in compilation errors.
+type UnsafeAsignadorServiceServer interface {
+	mustEmbedUnimplementedAsignadorServiceServer()
+}
+
+func RegisterAsignadorServiceServer(s grpc.ServiceRegistrar, srv AsignadorServiceServer) {
+	// If the following call pancis, it indicates UnimplementedAsignadorServiceServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&AsignadorService_ServiceDesc, srv)
+}
+
+func _AsignadorService_AsignarDataNode_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RequestAsignar)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AsignadorServiceServer).AsignarDataNode(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AsignadorService_AsignarDataNode_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AsignadorServiceServer).AsignarDataNode(ctx, req.(*RequestAsignar))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AsignadorService_ObtenerEstadoYAsignacion_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SolicitudEstado)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AsignadorServiceServer).ObtenerEstadoYAsignacion(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AsignadorService_ObtenerEstadoYAsignacion_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AsignadorServiceServer).ObtenerEstadoYAsignacion(ctx, req.(*SolicitudEstado))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// AsignadorService_ServiceDesc is the grpc.ServiceDesc for AsignadorService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var AsignadorService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "heint.AsignadorService",
+	HandlerType: (*AsignadorServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "AsignarDataNode",
+			Handler:    _AsignadorService_AsignarDataNode_Handler,
+		},
+		{
+			MethodName: "ObtenerEstadoYAsignacion",
+			Handler:    _AsignadorService_ObtenerEstadoYAsignacion_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

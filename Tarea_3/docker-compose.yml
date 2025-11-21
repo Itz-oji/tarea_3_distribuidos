@@ -17,7 +17,7 @@ services:
     networks:
       - red_global
     ports:
-      - "51000:51000"
+      - "52041:51000"
 
   MR1:
     build:
@@ -43,13 +43,6 @@ services:
       dockerfile: ./datanode3/Dockerfile.datanode3
     container_name: datanode3
     profiles: ["mv1"]
-    environment:
-      - NODE_ID=datanode3
-      - GRPC_PORT=57000
-      - PEERS=10.35.168.59:51000,10.35.168.59:52000
-      - N=3
-      - W=2
-      - R=2
     networks:
       - red_global
     ports:
@@ -63,9 +56,9 @@ services:
     profiles: ["mv1"]
     environment:
       - SERVICE_NAME=broker
-      - GRPC_PORT=54000
+      - GRPC_PORT=60000
     ports:
-      - "55000:54000"
+      - "60000:60000"
     networks:
       - red_global
 
@@ -132,13 +125,10 @@ services:
       dockerfile: ./datanode1/Dockerfile.datanode1
     container_name: datanode1
     profiles: ["mv3"]
-    environment:
-      - SERVICE_NAME=datanode1
-      - GRPC_PORT=52220
-      - DB_HOST=10.35.168.59:52000
-      - BROKER_HOST=10.35.168.62:54000
     networks:
       - red_global
+    ports:
+      - "58000:58000"
 
   consenso2:
     build:
@@ -178,14 +168,10 @@ services:
       dockerfile: ./datanode2/Dockerfile.datanode2
     container_name: datanode2
     profiles: ["mv4"]
-    environment:
-      - SERVICE_NAME=datanode2
-      - GRPC_PORT=57770
-      - DB_HOST=10.35.168.59:57000
-      - BROKER_HOST=10.35.168.62:54000
     networks:
       - red_global
-
+    ports:
+      - "59000:59000"
 
   consenso3:
     build:

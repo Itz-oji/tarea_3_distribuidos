@@ -2,10 +2,10 @@ syntax = "proto3";
 
 package heint;
 
-option go_package = "heint/proto;proto";
+option go_package = "/proto;proto";
 
 message Response {
-    string nodoID = 1;
+    string mensaje = 1;
 }
 message AsientoSelect {
     string asientoID = 1;
@@ -14,6 +14,20 @@ message AsientoSelect {
 message FactBaggage {
     string BaggageID = 1;
     string Baggage = 2;
+}
+message SolicitudEstado {
+    string cliente = 1;
+}
+message RequestAsignar {
+    string cliente = 1;
+}
+message ResponseAsignar {
+    string datanode = 1;
+}
+message ResponseEstadoAsignado {
+    string datanode = 1;
+    string idSistema = 2;
+    map<string,bool> asientos = 3;
 }
 message Estado {
     string id = 1;
@@ -25,5 +39,13 @@ service BrokerService {
     rpc SendEstado (Response) returns (Estado);
     rpc SendReserva (AsientoSelect) returns (Response);
     rpc SendBaggage (FactBaggage) returns (Response);
+    rpc ObtenerEstadoYAsignacion(SolicitudEstado) returns (ResponseEstadoAsignado);
 }
-
+service DataNodeService {
+    rpc ObtenerEstado (SolicitudEstado) returns (ResponseEstadoAsignado);
+    rpc EscribirReserva (AsientoSelect) returns (Response);
+}
+service AsignadorService {
+    rpc AsignarDataNode(RequestAsignar) returns (ResponseAsignar);
+    rpc ObtenerEstadoYAsignacion(SolicitudEstado) returns (ResponseEstadoAsignado);
+}
