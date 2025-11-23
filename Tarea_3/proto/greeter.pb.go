@@ -21,9 +21,11 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// ------------------------ RESPUESTAS BASE ------------------------
 type Response struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Mensaje       string                 `protobuf:"bytes,1,opt,name=mensaje,proto3" json:"mensaje,omitempty"`
+	Ok            bool                   `protobuf:"varint,2,opt,name=ok,proto3" json:"ok,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -65,10 +67,19 @@ func (x *Response) GetMensaje() string {
 	return ""
 }
 
+func (x *Response) GetOk() bool {
+	if x != nil {
+		return x.Ok
+	}
+	return false
+}
+
+// ------------------------ ASIENTOS ------------------------
 type AsientoSelect struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	AsientoID     string                 `protobuf:"bytes,1,opt,name=asientoID,proto3" json:"asientoID,omitempty"`
-	Asiento       string                 `protobuf:"bytes,2,opt,name=asiento,proto3" json:"asiento,omitempty"`
+	ClienteId     string                 `protobuf:"bytes,1,opt,name=cliente_id,json=clienteId,proto3" json:"cliente_id,omitempty"`       // ID del cliente (NECESARIO para LWW)
+	Asiento       string                 `protobuf:"bytes,2,opt,name=asiento,proto3" json:"asiento,omitempty"`                            // ID del asiento ("A1", "B2", etc.)
+	VectorClock   *VectorClock           `protobuf:"bytes,3,opt,name=vector_clock,json=vectorClock,proto3" json:"vector_clock,omitempty"` // Reloj vectorial para causalidad
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -103,9 +114,9 @@ func (*AsientoSelect) Descriptor() ([]byte, []int) {
 	return file_proto_greeter_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *AsientoSelect) GetAsientoID() string {
+func (x *AsientoSelect) GetClienteId() string {
 	if x != nil {
-		return x.AsientoID
+		return x.ClienteId
 	}
 	return ""
 }
@@ -117,6 +128,326 @@ func (x *AsientoSelect) GetAsiento() string {
 	return ""
 }
 
+func (x *AsientoSelect) GetVectorClock() *VectorClock {
+	if x != nil {
+		return x.VectorClock
+	}
+	return nil
+}
+
+// Estado de asiento replicable
+type SeatReplica struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Asiento       string                 `protobuf:"bytes,1,opt,name=asiento,proto3" json:"asiento,omitempty"`
+	Taken         bool                   `protobuf:"varint,2,opt,name=taken,proto3" json:"taken,omitempty"`                         // true = ocupado
+	ClienteId     string                 `protobuf:"bytes,3,opt,name=cliente_id,json=clienteId,proto3" json:"cliente_id,omitempty"` // último cliente ganador
+	VectorClock   *VectorClock           `protobuf:"bytes,4,opt,name=vector_clock,json=vectorClock,proto3" json:"vector_clock,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SeatReplica) Reset() {
+	*x = SeatReplica{}
+	mi := &file_proto_greeter_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SeatReplica) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SeatReplica) ProtoMessage() {}
+
+func (x *SeatReplica) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_greeter_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SeatReplica.ProtoReflect.Descriptor instead.
+func (*SeatReplica) Descriptor() ([]byte, []int) {
+	return file_proto_greeter_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *SeatReplica) GetAsiento() string {
+	if x != nil {
+		return x.Asiento
+	}
+	return ""
+}
+
+func (x *SeatReplica) GetTaken() bool {
+	if x != nil {
+		return x.Taken
+	}
+	return false
+}
+
+func (x *SeatReplica) GetClienteId() string {
+	if x != nil {
+		return x.ClienteId
+	}
+	return ""
+}
+
+func (x *SeatReplica) GetVectorClock() *VectorClock {
+	if x != nil {
+		return x.VectorClock
+	}
+	return nil
+}
+
+// ------------------------ VUELOS ------------------------
+type FlightUpdate struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	FlightId      string                 `protobuf:"bytes,1,opt,name=flight_id,json=flightId,proto3" json:"flight_id,omitempty"`
+	NewStatus     string                 `protobuf:"bytes,2,opt,name=new_status,json=newStatus,proto3" json:"new_status,omitempty"`
+	NewGate       string                 `protobuf:"bytes,3,opt,name=new_gate,json=newGate,proto3" json:"new_gate,omitempty"`
+	AirlineId     string                 `protobuf:"bytes,4,opt,name=airline_id,json=airlineId,proto3" json:"airline_id,omitempty"`       // TIE-BREAK determinista
+	VectorClock   *VectorClock           `protobuf:"bytes,5,opt,name=vector_clock,json=vectorClock,proto3" json:"vector_clock,omitempty"` // causalidad
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FlightUpdate) Reset() {
+	*x = FlightUpdate{}
+	mi := &file_proto_greeter_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FlightUpdate) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FlightUpdate) ProtoMessage() {}
+
+func (x *FlightUpdate) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_greeter_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FlightUpdate.ProtoReflect.Descriptor instead.
+func (*FlightUpdate) Descriptor() ([]byte, []int) {
+	return file_proto_greeter_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *FlightUpdate) GetFlightId() string {
+	if x != nil {
+		return x.FlightId
+	}
+	return ""
+}
+
+func (x *FlightUpdate) GetNewStatus() string {
+	if x != nil {
+		return x.NewStatus
+	}
+	return ""
+}
+
+func (x *FlightUpdate) GetNewGate() string {
+	if x != nil {
+		return x.NewGate
+	}
+	return ""
+}
+
+func (x *FlightUpdate) GetAirlineId() string {
+	if x != nil {
+		return x.AirlineId
+	}
+	return ""
+}
+
+func (x *FlightUpdate) GetVectorClock() *VectorClock {
+	if x != nil {
+		return x.VectorClock
+	}
+	return nil
+}
+
+// Estado de vuelo replicable
+type FlightReplica struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	FlightId      string                 `protobuf:"bytes,1,opt,name=flight_id,json=flightId,proto3" json:"flight_id,omitempty"`
+	Status        string                 `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty"`
+	Gate          string                 `protobuf:"bytes,3,opt,name=gate,proto3" json:"gate,omitempty"`
+	AirlineId     string                 `protobuf:"bytes,4,opt,name=airline_id,json=airlineId,proto3" json:"airline_id,omitempty"`
+	VectorClock   *VectorClock           `protobuf:"bytes,5,opt,name=vector_clock,json=vectorClock,proto3" json:"vector_clock,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FlightReplica) Reset() {
+	*x = FlightReplica{}
+	mi := &file_proto_greeter_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FlightReplica) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FlightReplica) ProtoMessage() {}
+
+func (x *FlightReplica) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_greeter_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FlightReplica.ProtoReflect.Descriptor instead.
+func (*FlightReplica) Descriptor() ([]byte, []int) {
+	return file_proto_greeter_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *FlightReplica) GetFlightId() string {
+	if x != nil {
+		return x.FlightId
+	}
+	return ""
+}
+
+func (x *FlightReplica) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *FlightReplica) GetGate() string {
+	if x != nil {
+		return x.Gate
+	}
+	return ""
+}
+
+func (x *FlightReplica) GetAirlineId() string {
+	if x != nil {
+		return x.AirlineId
+	}
+	return ""
+}
+
+func (x *FlightReplica) GetVectorClock() *VectorClock {
+	if x != nil {
+		return x.VectorClock
+	}
+	return nil
+}
+
+// ------------------------ GOSSIP ENTRE DATANODES ------------------------
+type GossipRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Flights       []*FlightReplica       `protobuf:"bytes,1,rep,name=flights,proto3" json:"flights,omitempty"`
+	Seats         []*SeatReplica         `protobuf:"bytes,2,rep,name=seats,proto3" json:"seats,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GossipRequest) Reset() {
+	*x = GossipRequest{}
+	mi := &file_proto_greeter_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GossipRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GossipRequest) ProtoMessage() {}
+
+func (x *GossipRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_greeter_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GossipRequest.ProtoReflect.Descriptor instead.
+func (*GossipRequest) Descriptor() ([]byte, []int) {
+	return file_proto_greeter_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *GossipRequest) GetFlights() []*FlightReplica {
+	if x != nil {
+		return x.Flights
+	}
+	return nil
+}
+
+func (x *GossipRequest) GetSeats() []*SeatReplica {
+	if x != nil {
+		return x.Seats
+	}
+	return nil
+}
+
+type GossipResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GossipResponse) Reset() {
+	*x = GossipResponse{}
+	mi := &file_proto_greeter_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GossipResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GossipResponse) ProtoMessage() {}
+
+func (x *GossipResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_greeter_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GossipResponse.ProtoReflect.Descriptor instead.
+func (*GossipResponse) Descriptor() ([]byte, []int) {
+	return file_proto_greeter_proto_rawDescGZIP(), []int{6}
+}
+
+// ------------------------ CONSULTAS GENERALES ------------------------
 type FactBaggage struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	BaggageID     string                 `protobuf:"bytes,1,opt,name=BaggageID,proto3" json:"BaggageID,omitempty"`
@@ -127,7 +458,7 @@ type FactBaggage struct {
 
 func (x *FactBaggage) Reset() {
 	*x = FactBaggage{}
-	mi := &file_proto_greeter_proto_msgTypes[2]
+	mi := &file_proto_greeter_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -139,7 +470,7 @@ func (x *FactBaggage) String() string {
 func (*FactBaggage) ProtoMessage() {}
 
 func (x *FactBaggage) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_greeter_proto_msgTypes[2]
+	mi := &file_proto_greeter_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -152,7 +483,7 @@ func (x *FactBaggage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FactBaggage.ProtoReflect.Descriptor instead.
 func (*FactBaggage) Descriptor() ([]byte, []int) {
-	return file_proto_greeter_proto_rawDescGZIP(), []int{2}
+	return file_proto_greeter_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *FactBaggage) GetBaggageID() string {
@@ -178,7 +509,7 @@ type SolicitudEstado struct {
 
 func (x *SolicitudEstado) Reset() {
 	*x = SolicitudEstado{}
-	mi := &file_proto_greeter_proto_msgTypes[3]
+	mi := &file_proto_greeter_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -190,7 +521,7 @@ func (x *SolicitudEstado) String() string {
 func (*SolicitudEstado) ProtoMessage() {}
 
 func (x *SolicitudEstado) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_greeter_proto_msgTypes[3]
+	mi := &file_proto_greeter_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -203,7 +534,7 @@ func (x *SolicitudEstado) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SolicitudEstado.ProtoReflect.Descriptor instead.
 func (*SolicitudEstado) Descriptor() ([]byte, []int) {
-	return file_proto_greeter_proto_rawDescGZIP(), []int{3}
+	return file_proto_greeter_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *SolicitudEstado) GetCliente() string {
@@ -222,7 +553,7 @@ type RequestAsignar struct {
 
 func (x *RequestAsignar) Reset() {
 	*x = RequestAsignar{}
-	mi := &file_proto_greeter_proto_msgTypes[4]
+	mi := &file_proto_greeter_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -234,7 +565,7 @@ func (x *RequestAsignar) String() string {
 func (*RequestAsignar) ProtoMessage() {}
 
 func (x *RequestAsignar) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_greeter_proto_msgTypes[4]
+	mi := &file_proto_greeter_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -247,7 +578,7 @@ func (x *RequestAsignar) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RequestAsignar.ProtoReflect.Descriptor instead.
 func (*RequestAsignar) Descriptor() ([]byte, []int) {
-	return file_proto_greeter_proto_rawDescGZIP(), []int{4}
+	return file_proto_greeter_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *RequestAsignar) GetCliente() string {
@@ -257,6 +588,7 @@ func (x *RequestAsignar) GetCliente() string {
 	return ""
 }
 
+// El broker devuelve SOLO estructuras visibles a cliente/coordinador
 type ResponseAsignar struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Datanode      string                 `protobuf:"bytes,1,opt,name=datanode,proto3" json:"datanode,omitempty"`
@@ -266,7 +598,7 @@ type ResponseAsignar struct {
 
 func (x *ResponseAsignar) Reset() {
 	*x = ResponseAsignar{}
-	mi := &file_proto_greeter_proto_msgTypes[5]
+	mi := &file_proto_greeter_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -278,7 +610,7 @@ func (x *ResponseAsignar) String() string {
 func (*ResponseAsignar) ProtoMessage() {}
 
 func (x *ResponseAsignar) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_greeter_proto_msgTypes[5]
+	mi := &file_proto_greeter_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -291,7 +623,7 @@ func (x *ResponseAsignar) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResponseAsignar.ProtoReflect.Descriptor instead.
 func (*ResponseAsignar) Descriptor() ([]byte, []int) {
-	return file_proto_greeter_proto_rawDescGZIP(), []int{5}
+	return file_proto_greeter_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *ResponseAsignar) GetDatanode() string {
@@ -301,18 +633,19 @@ func (x *ResponseAsignar) GetDatanode() string {
 	return ""
 }
 
+// Para Coordinador → Cliente
 type ResponseEstadoAsignado struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Datanode      string                 `protobuf:"bytes,1,opt,name=datanode,proto3" json:"datanode,omitempty"`
 	IdSistema     string                 `protobuf:"bytes,2,opt,name=idSistema,proto3" json:"idSistema,omitempty"`
-	Asientos      map[string]bool        `protobuf:"bytes,3,rep,name=asientos,proto3" json:"asientos,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
+	Asientos      map[string]bool        `protobuf:"bytes,3,rep,name=asientos,proto3" json:"asientos,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"` // Visible para cliente (no enviar relojes aquí)
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ResponseEstadoAsignado) Reset() {
 	*x = ResponseEstadoAsignado{}
-	mi := &file_proto_greeter_proto_msgTypes[6]
+	mi := &file_proto_greeter_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -324,7 +657,7 @@ func (x *ResponseEstadoAsignado) String() string {
 func (*ResponseEstadoAsignado) ProtoMessage() {}
 
 func (x *ResponseEstadoAsignado) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_greeter_proto_msgTypes[6]
+	mi := &file_proto_greeter_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -337,7 +670,7 @@ func (x *ResponseEstadoAsignado) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResponseEstadoAsignado.ProtoReflect.Descriptor instead.
 func (*ResponseEstadoAsignado) Descriptor() ([]byte, []int) {
-	return file_proto_greeter_proto_rawDescGZIP(), []int{6}
+	return file_proto_greeter_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *ResponseEstadoAsignado) GetDatanode() string {
@@ -371,7 +704,7 @@ type Estado struct {
 
 func (x *Estado) Reset() {
 	*x = Estado{}
-	mi := &file_proto_greeter_proto_msgTypes[7]
+	mi := &file_proto_greeter_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -383,7 +716,7 @@ func (x *Estado) String() string {
 func (*Estado) ProtoMessage() {}
 
 func (x *Estado) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_greeter_proto_msgTypes[7]
+	mi := &file_proto_greeter_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -396,7 +729,7 @@ func (x *Estado) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Estado.ProtoReflect.Descriptor instead.
 func (*Estado) Descriptor() ([]byte, []int) {
-	return file_proto_greeter_proto_rawDescGZIP(), []int{7}
+	return file_proto_greeter_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *Estado) GetId() string {
@@ -413,6 +746,7 @@ func (x *Estado) GetAsientosDisponibles() map[string]bool {
 	return nil
 }
 
+// ------------------------ VECTOR CLOCK ------------------------
 type VectorClock struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Clocks        map[string]int32       `protobuf:"bytes,1,rep,name=clocks,proto3" json:"clocks,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
@@ -422,7 +756,7 @@ type VectorClock struct {
 
 func (x *VectorClock) Reset() {
 	*x = VectorClock{}
-	mi := &file_proto_greeter_proto_msgTypes[8]
+	mi := &file_proto_greeter_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -434,7 +768,7 @@ func (x *VectorClock) String() string {
 func (*VectorClock) ProtoMessage() {}
 
 func (x *VectorClock) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_greeter_proto_msgTypes[8]
+	mi := &file_proto_greeter_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -447,80 +781,12 @@ func (x *VectorClock) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VectorClock.ProtoReflect.Descriptor instead.
 func (*VectorClock) Descriptor() ([]byte, []int) {
-	return file_proto_greeter_proto_rawDescGZIP(), []int{8}
+	return file_proto_greeter_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *VectorClock) GetClocks() map[string]int32 {
 	if x != nil {
 		return x.Clocks
-	}
-	return nil
-}
-
-type FlightUpdate struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	FlightId      string                 `protobuf:"bytes,1,opt,name=flight_id,json=flightId,proto3" json:"flight_id,omitempty"`
-	NewStatus     string                 `protobuf:"bytes,2,opt,name=new_status,json=newStatus,proto3" json:"new_status,omitempty"`
-	NewGate       string                 `protobuf:"bytes,3,opt,name=new_gate,json=newGate,proto3" json:"new_gate,omitempty"`
-	VectorClock   *VectorClock           `protobuf:"bytes,4,opt,name=vector_clock,json=vectorClock,proto3" json:"vector_clock,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *FlightUpdate) Reset() {
-	*x = FlightUpdate{}
-	mi := &file_proto_greeter_proto_msgTypes[9]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *FlightUpdate) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*FlightUpdate) ProtoMessage() {}
-
-func (x *FlightUpdate) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_greeter_proto_msgTypes[9]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use FlightUpdate.ProtoReflect.Descriptor instead.
-func (*FlightUpdate) Descriptor() ([]byte, []int) {
-	return file_proto_greeter_proto_rawDescGZIP(), []int{9}
-}
-
-func (x *FlightUpdate) GetFlightId() string {
-	if x != nil {
-		return x.FlightId
-	}
-	return ""
-}
-
-func (x *FlightUpdate) GetNewStatus() string {
-	if x != nil {
-		return x.NewStatus
-	}
-	return ""
-}
-
-func (x *FlightUpdate) GetNewGate() string {
-	if x != nil {
-		return x.NewGate
-	}
-	return ""
-}
-
-func (x *FlightUpdate) GetVectorClock() *VectorClock {
-	if x != nil {
-		return x.VectorClock
 	}
 	return nil
 }
@@ -537,7 +803,7 @@ type VoteRequest struct {
 
 func (x *VoteRequest) Reset() {
 	*x = VoteRequest{}
-	mi := &file_proto_greeter_proto_msgTypes[10]
+	mi := &file_proto_greeter_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -549,7 +815,7 @@ func (x *VoteRequest) String() string {
 func (*VoteRequest) ProtoMessage() {}
 
 func (x *VoteRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_greeter_proto_msgTypes[10]
+	mi := &file_proto_greeter_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -562,7 +828,7 @@ func (x *VoteRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VoteRequest.ProtoReflect.Descriptor instead.
 func (*VoteRequest) Descriptor() ([]byte, []int) {
-	return file_proto_greeter_proto_rawDescGZIP(), []int{10}
+	return file_proto_greeter_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *VoteRequest) GetTerm() int32 {
@@ -603,7 +869,7 @@ type VoteResponse struct {
 
 func (x *VoteResponse) Reset() {
 	*x = VoteResponse{}
-	mi := &file_proto_greeter_proto_msgTypes[11]
+	mi := &file_proto_greeter_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -615,7 +881,7 @@ func (x *VoteResponse) String() string {
 func (*VoteResponse) ProtoMessage() {}
 
 func (x *VoteResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_greeter_proto_msgTypes[11]
+	mi := &file_proto_greeter_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -628,7 +894,7 @@ func (x *VoteResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VoteResponse.ProtoReflect.Descriptor instead.
 func (*VoteResponse) Descriptor() ([]byte, []int) {
-	return file_proto_greeter_proto_rawDescGZIP(), []int{11}
+	return file_proto_greeter_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *VoteResponse) GetTerm() int32 {
@@ -655,7 +921,7 @@ type LogEntry struct {
 
 func (x *LogEntry) Reset() {
 	*x = LogEntry{}
-	mi := &file_proto_greeter_proto_msgTypes[12]
+	mi := &file_proto_greeter_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -667,7 +933,7 @@ func (x *LogEntry) String() string {
 func (*LogEntry) ProtoMessage() {}
 
 func (x *LogEntry) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_greeter_proto_msgTypes[12]
+	mi := &file_proto_greeter_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -680,7 +946,7 @@ func (x *LogEntry) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LogEntry.ProtoReflect.Descriptor instead.
 func (*LogEntry) Descriptor() ([]byte, []int) {
-	return file_proto_greeter_proto_rawDescGZIP(), []int{12}
+	return file_proto_greeter_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *LogEntry) GetTerm() int32 {
@@ -711,7 +977,7 @@ type AppendRequest struct {
 
 func (x *AppendRequest) Reset() {
 	*x = AppendRequest{}
-	mi := &file_proto_greeter_proto_msgTypes[13]
+	mi := &file_proto_greeter_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -723,7 +989,7 @@ func (x *AppendRequest) String() string {
 func (*AppendRequest) ProtoMessage() {}
 
 func (x *AppendRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_greeter_proto_msgTypes[13]
+	mi := &file_proto_greeter_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -736,7 +1002,7 @@ func (x *AppendRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AppendRequest.ProtoReflect.Descriptor instead.
 func (*AppendRequest) Descriptor() ([]byte, []int) {
-	return file_proto_greeter_proto_rawDescGZIP(), []int{13}
+	return file_proto_greeter_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *AppendRequest) GetTerm() int32 {
@@ -792,7 +1058,7 @@ type AppendResponse struct {
 
 func (x *AppendResponse) Reset() {
 	*x = AppendResponse{}
-	mi := &file_proto_greeter_proto_msgTypes[14]
+	mi := &file_proto_greeter_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -804,7 +1070,7 @@ func (x *AppendResponse) String() string {
 func (*AppendResponse) ProtoMessage() {}
 
 func (x *AppendResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_greeter_proto_msgTypes[14]
+	mi := &file_proto_greeter_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -817,7 +1083,7 @@ func (x *AppendResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AppendResponse.ProtoReflect.Descriptor instead.
 func (*AppendResponse) Descriptor() ([]byte, []int) {
-	return file_proto_greeter_proto_rawDescGZIP(), []int{14}
+	return file_proto_greeter_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *AppendResponse) GetTerm() int32 {
@@ -850,7 +1116,7 @@ type Proposal struct {
 
 func (x *Proposal) Reset() {
 	*x = Proposal{}
-	mi := &file_proto_greeter_proto_msgTypes[15]
+	mi := &file_proto_greeter_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -862,7 +1128,7 @@ func (x *Proposal) String() string {
 func (*Proposal) ProtoMessage() {}
 
 func (x *Proposal) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_greeter_proto_msgTypes[15]
+	mi := &file_proto_greeter_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -875,7 +1141,7 @@ func (x *Proposal) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Proposal.ProtoReflect.Descriptor instead.
 func (*Proposal) Descriptor() ([]byte, []int) {
-	return file_proto_greeter_proto_rawDescGZIP(), []int{15}
+	return file_proto_greeter_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *Proposal) GetCommand() string {
@@ -896,7 +1162,7 @@ type ConsensusReply struct {
 
 func (x *ConsensusReply) Reset() {
 	*x = ConsensusReply{}
-	mi := &file_proto_greeter_proto_msgTypes[16]
+	mi := &file_proto_greeter_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -908,7 +1174,7 @@ func (x *ConsensusReply) String() string {
 func (*ConsensusReply) ProtoMessage() {}
 
 func (x *ConsensusReply) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_greeter_proto_msgTypes[16]
+	mi := &file_proto_greeter_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -921,7 +1187,7 @@ func (x *ConsensusReply) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConsensusReply.ProtoReflect.Descriptor instead.
 func (*ConsensusReply) Descriptor() ([]byte, []int) {
-	return file_proto_greeter_proto_rawDescGZIP(), []int{16}
+	return file_proto_greeter_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *ConsensusReply) GetSuccess() bool {
@@ -955,7 +1221,7 @@ type FlightRequest struct {
 
 func (x *FlightRequest) Reset() {
 	*x = FlightRequest{}
-	mi := &file_proto_greeter_proto_msgTypes[17]
+	mi := &file_proto_greeter_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -967,7 +1233,7 @@ func (x *FlightRequest) String() string {
 func (*FlightRequest) ProtoMessage() {}
 
 func (x *FlightRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_greeter_proto_msgTypes[17]
+	mi := &file_proto_greeter_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -980,7 +1246,7 @@ func (x *FlightRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FlightRequest.ProtoReflect.Descriptor instead.
 func (*FlightRequest) Descriptor() ([]byte, []int) {
-	return file_proto_greeter_proto_rawDescGZIP(), []int{17}
+	return file_proto_greeter_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *FlightRequest) GetFlightId() string {
@@ -1008,7 +1274,7 @@ type FlightResponse struct {
 
 func (x *FlightResponse) Reset() {
 	*x = FlightResponse{}
-	mi := &file_proto_greeter_proto_msgTypes[18]
+	mi := &file_proto_greeter_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1020,7 +1286,7 @@ func (x *FlightResponse) String() string {
 func (*FlightResponse) ProtoMessage() {}
 
 func (x *FlightResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_greeter_proto_msgTypes[18]
+	mi := &file_proto_greeter_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1033,7 +1299,7 @@ func (x *FlightResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FlightResponse.ProtoReflect.Descriptor instead.
 func (*FlightResponse) Descriptor() ([]byte, []int) {
-	return file_proto_greeter_proto_rawDescGZIP(), []int{18}
+	return file_proto_greeter_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *FlightResponse) GetFlightId() string {
@@ -1061,12 +1327,40 @@ var File_proto_greeter_proto protoreflect.FileDescriptor
 
 const file_proto_greeter_proto_rawDesc = "" +
 	"\n" +
-	"\x13proto/greeter.proto\x12\x05heint\"$\n" +
+	"\x13proto/greeter.proto\x12\x05heint\"4\n" +
 	"\bResponse\x12\x18\n" +
-	"\amensaje\x18\x01 \x01(\tR\amensaje\"G\n" +
-	"\rAsientoSelect\x12\x1c\n" +
-	"\tasientoID\x18\x01 \x01(\tR\tasientoID\x12\x18\n" +
-	"\aasiento\x18\x02 \x01(\tR\aasiento\"E\n" +
+	"\amensaje\x18\x01 \x01(\tR\amensaje\x12\x0e\n" +
+	"\x02ok\x18\x02 \x01(\bR\x02ok\"\x7f\n" +
+	"\rAsientoSelect\x12\x1d\n" +
+	"\n" +
+	"cliente_id\x18\x01 \x01(\tR\tclienteId\x12\x18\n" +
+	"\aasiento\x18\x02 \x01(\tR\aasiento\x125\n" +
+	"\fvector_clock\x18\x03 \x01(\v2\x12.heint.VectorClockR\vvectorClock\"\x93\x01\n" +
+	"\vSeatReplica\x12\x18\n" +
+	"\aasiento\x18\x01 \x01(\tR\aasiento\x12\x14\n" +
+	"\x05taken\x18\x02 \x01(\bR\x05taken\x12\x1d\n" +
+	"\n" +
+	"cliente_id\x18\x03 \x01(\tR\tclienteId\x125\n" +
+	"\fvector_clock\x18\x04 \x01(\v2\x12.heint.VectorClockR\vvectorClock\"\xbb\x01\n" +
+	"\fFlightUpdate\x12\x1b\n" +
+	"\tflight_id\x18\x01 \x01(\tR\bflightId\x12\x1d\n" +
+	"\n" +
+	"new_status\x18\x02 \x01(\tR\tnewStatus\x12\x19\n" +
+	"\bnew_gate\x18\x03 \x01(\tR\anewGate\x12\x1d\n" +
+	"\n" +
+	"airline_id\x18\x04 \x01(\tR\tairlineId\x125\n" +
+	"\fvector_clock\x18\x05 \x01(\v2\x12.heint.VectorClockR\vvectorClock\"\xae\x01\n" +
+	"\rFlightReplica\x12\x1b\n" +
+	"\tflight_id\x18\x01 \x01(\tR\bflightId\x12\x16\n" +
+	"\x06status\x18\x02 \x01(\tR\x06status\x12\x12\n" +
+	"\x04gate\x18\x03 \x01(\tR\x04gate\x12\x1d\n" +
+	"\n" +
+	"airline_id\x18\x04 \x01(\tR\tairlineId\x125\n" +
+	"\fvector_clock\x18\x05 \x01(\v2\x12.heint.VectorClockR\vvectorClock\"i\n" +
+	"\rGossipRequest\x12.\n" +
+	"\aflights\x18\x01 \x03(\v2\x14.heint.FlightReplicaR\aflights\x12(\n" +
+	"\x05seats\x18\x02 \x03(\v2\x12.heint.SeatReplicaR\x05seats\"\x10\n" +
+	"\x0eGossipResponse\"E\n" +
 	"\vFactBaggage\x12\x1c\n" +
 	"\tBaggageID\x18\x01 \x01(\tR\tBaggageID\x12\x18\n" +
 	"\aBaggage\x18\x02 \x01(\tR\aBaggage\"+\n" +
@@ -1093,13 +1387,7 @@ const file_proto_greeter_proto_rawDesc = "" +
 	"\x06clocks\x18\x01 \x03(\v2\x1e.heint.VectorClock.ClocksEntryR\x06clocks\x1a9\n" +
 	"\vClocksEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\x05R\x05value:\x028\x01\"\x9c\x01\n" +
-	"\fFlightUpdate\x12\x1b\n" +
-	"\tflight_id\x18\x01 \x01(\tR\bflightId\x12\x1d\n" +
-	"\n" +
-	"new_status\x18\x02 \x01(\tR\tnewStatus\x12\x19\n" +
-	"\bnew_gate\x18\x03 \x01(\tR\anewGate\x125\n" +
-	"\fvector_clock\x18\x04 \x01(\v2\x12.heint.VectorClockR\vvectorClock\"\x8e\x01\n" +
+	"\x05value\x18\x02 \x01(\x05R\x05value:\x028\x01\"\x8e\x01\n" +
 	"\vVoteRequest\x12\x12\n" +
 	"\x04term\x18\x01 \x01(\x05R\x04term\x12!\n" +
 	"\fcandidate_id\x18\x02 \x01(\tR\vcandidateId\x12$\n" +
@@ -1142,20 +1430,21 @@ const file_proto_greeter_proto_rawDesc = "" +
 	"SendEstado\x12\x0f.heint.Response\x1a\r.heint.Estado\x124\n" +
 	"\vSendReserva\x12\x14.heint.AsientoSelect\x1a\x0f.heint.Response\x122\n" +
 	"\vSendBaggage\x12\x12.heint.FactBaggage\x1a\x0f.heint.Response\x12Q\n" +
-	"\x18ObtenerEstadoYAsignacion\x12\x16.heint.SolicitudEstado\x1a\x1d.heint.ResponseEstadoAsignado2\xce\x01\n" +
+	"\x18ObtenerEstadoYAsignacion\x12\x16.heint.SolicitudEstado\x1a\x1d.heint.ResponseEstadoAsignado2\x85\x02\n" +
 	"\x0fDataNodeService\x12F\n" +
 	"\rObtenerEstado\x12\x16.heint.SolicitudEstado\x1a\x1d.heint.ResponseEstadoAsignado\x128\n" +
 	"\x0fEscribirReserva\x12\x14.heint.AsientoSelect\x1a\x0f.heint.Response\x129\n" +
-	"\x11UpdateFlightState\x12\x13.heint.FlightUpdate\x1a\x0f.heint.Response2\xa7\x01\n" +
+	"\x11UpdateFlightState\x12\x13.heint.FlightUpdate\x1a\x0f.heint.Response\x125\n" +
+	"\x06Gossip\x12\x14.heint.GossipRequest\x1a\x15.heint.GossipResponse2\xa7\x01\n" +
 	"\x10AsignadorService\x12@\n" +
 	"\x0fAsignarDataNode\x12\x15.heint.RequestAsignar\x1a\x16.heint.ResponseAsignar\x12Q\n" +
-	"\x18ObtenerEstadoYAsignacion\x12\x16.heint.SolicitudEstado\x1a\x1d.heint.ResponseEstadoAsignado2\xba\x01\n" +
-	"\tConsensus\x128\n" +
-	"\vRequestVote\x12\x12.heint.VoteRequest\x1a\x13.heint.VoteResponse\"\x00\x12>\n" +
-	"\rAppendEntries\x12\x14.heint.AppendRequest\x1a\x15.heint.AppendResponse\"\x00\x123\n" +
-	"\aPropose\x12\x0f.heint.Proposal\x1a\x15.heint.ConsensusReply\"\x002O\n" +
-	"\vInfoService\x12@\n" +
-	"\x0fGetFlightStatus\x12\x14.heint.FlightRequest\x1a\x15.heint.FlightResponse\"\x00B\x0eZ\f/proto;protob\x06proto3"
+	"\x18ObtenerEstadoYAsignacion\x12\x16.heint.SolicitudEstado\x1a\x1d.heint.ResponseEstadoAsignado2\xb4\x01\n" +
+	"\tConsensus\x126\n" +
+	"\vRequestVote\x12\x12.heint.VoteRequest\x1a\x13.heint.VoteResponse\x12<\n" +
+	"\rAppendEntries\x12\x14.heint.AppendRequest\x1a\x15.heint.AppendResponse\x121\n" +
+	"\aPropose\x12\x0f.heint.Proposal\x1a\x15.heint.ConsensusReply2M\n" +
+	"\vInfoService\x12>\n" +
+	"\x0fGetFlightStatus\x12\x14.heint.FlightRequest\x1a\x15.heint.FlightResponseB\x0eZ\f/proto;protob\x06proto3"
 
 var (
 	file_proto_greeter_proto_rawDescOnce sync.Once
@@ -1169,70 +1458,81 @@ func file_proto_greeter_proto_rawDescGZIP() []byte {
 	return file_proto_greeter_proto_rawDescData
 }
 
-var file_proto_greeter_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
+var file_proto_greeter_proto_msgTypes = make([]protoimpl.MessageInfo, 26)
 var file_proto_greeter_proto_goTypes = []any{
 	(*Response)(nil),               // 0: heint.Response
 	(*AsientoSelect)(nil),          // 1: heint.AsientoSelect
-	(*FactBaggage)(nil),            // 2: heint.FactBaggage
-	(*SolicitudEstado)(nil),        // 3: heint.SolicitudEstado
-	(*RequestAsignar)(nil),         // 4: heint.RequestAsignar
-	(*ResponseAsignar)(nil),        // 5: heint.ResponseAsignar
-	(*ResponseEstadoAsignado)(nil), // 6: heint.ResponseEstadoAsignado
-	(*Estado)(nil),                 // 7: heint.Estado
-	(*VectorClock)(nil),            // 8: heint.VectorClock
-	(*FlightUpdate)(nil),           // 9: heint.FlightUpdate
-	(*VoteRequest)(nil),            // 10: heint.VoteRequest
-	(*VoteResponse)(nil),           // 11: heint.VoteResponse
-	(*LogEntry)(nil),               // 12: heint.LogEntry
-	(*AppendRequest)(nil),          // 13: heint.AppendRequest
-	(*AppendResponse)(nil),         // 14: heint.AppendResponse
-	(*Proposal)(nil),               // 15: heint.Proposal
-	(*ConsensusReply)(nil),         // 16: heint.ConsensusReply
-	(*FlightRequest)(nil),          // 17: heint.FlightRequest
-	(*FlightResponse)(nil),         // 18: heint.FlightResponse
-	nil,                            // 19: heint.ResponseEstadoAsignado.AsientosEntry
-	nil,                            // 20: heint.Estado.AsientosDisponiblesEntry
-	nil,                            // 21: heint.VectorClock.ClocksEntry
+	(*SeatReplica)(nil),            // 2: heint.SeatReplica
+	(*FlightUpdate)(nil),           // 3: heint.FlightUpdate
+	(*FlightReplica)(nil),          // 4: heint.FlightReplica
+	(*GossipRequest)(nil),          // 5: heint.GossipRequest
+	(*GossipResponse)(nil),         // 6: heint.GossipResponse
+	(*FactBaggage)(nil),            // 7: heint.FactBaggage
+	(*SolicitudEstado)(nil),        // 8: heint.SolicitudEstado
+	(*RequestAsignar)(nil),         // 9: heint.RequestAsignar
+	(*ResponseAsignar)(nil),        // 10: heint.ResponseAsignar
+	(*ResponseEstadoAsignado)(nil), // 11: heint.ResponseEstadoAsignado
+	(*Estado)(nil),                 // 12: heint.Estado
+	(*VectorClock)(nil),            // 13: heint.VectorClock
+	(*VoteRequest)(nil),            // 14: heint.VoteRequest
+	(*VoteResponse)(nil),           // 15: heint.VoteResponse
+	(*LogEntry)(nil),               // 16: heint.LogEntry
+	(*AppendRequest)(nil),          // 17: heint.AppendRequest
+	(*AppendResponse)(nil),         // 18: heint.AppendResponse
+	(*Proposal)(nil),               // 19: heint.Proposal
+	(*ConsensusReply)(nil),         // 20: heint.ConsensusReply
+	(*FlightRequest)(nil),          // 21: heint.FlightRequest
+	(*FlightResponse)(nil),         // 22: heint.FlightResponse
+	nil,                            // 23: heint.ResponseEstadoAsignado.AsientosEntry
+	nil,                            // 24: heint.Estado.AsientosDisponiblesEntry
+	nil,                            // 25: heint.VectorClock.ClocksEntry
 }
 var file_proto_greeter_proto_depIdxs = []int32{
-	19, // 0: heint.ResponseEstadoAsignado.asientos:type_name -> heint.ResponseEstadoAsignado.AsientosEntry
-	20, // 1: heint.Estado.asientos_disponibles:type_name -> heint.Estado.AsientosDisponiblesEntry
-	21, // 2: heint.VectorClock.clocks:type_name -> heint.VectorClock.ClocksEntry
-	8,  // 3: heint.FlightUpdate.vector_clock:type_name -> heint.VectorClock
-	12, // 4: heint.AppendRequest.entries:type_name -> heint.LogEntry
-	0,  // 5: heint.BrokerService.SendOffer:input_type -> heint.Response
-	0,  // 6: heint.BrokerService.SendEstado:input_type -> heint.Response
-	1,  // 7: heint.BrokerService.SendReserva:input_type -> heint.AsientoSelect
-	2,  // 8: heint.BrokerService.SendBaggage:input_type -> heint.FactBaggage
-	3,  // 9: heint.BrokerService.ObtenerEstadoYAsignacion:input_type -> heint.SolicitudEstado
-	3,  // 10: heint.DataNodeService.ObtenerEstado:input_type -> heint.SolicitudEstado
-	1,  // 11: heint.DataNodeService.EscribirReserva:input_type -> heint.AsientoSelect
-	9,  // 12: heint.DataNodeService.UpdateFlightState:input_type -> heint.FlightUpdate
-	4,  // 13: heint.AsignadorService.AsignarDataNode:input_type -> heint.RequestAsignar
-	3,  // 14: heint.AsignadorService.ObtenerEstadoYAsignacion:input_type -> heint.SolicitudEstado
-	10, // 15: heint.Consensus.RequestVote:input_type -> heint.VoteRequest
-	13, // 16: heint.Consensus.AppendEntries:input_type -> heint.AppendRequest
-	15, // 17: heint.Consensus.Propose:input_type -> heint.Proposal
-	17, // 18: heint.InfoService.GetFlightStatus:input_type -> heint.FlightRequest
-	0,  // 19: heint.BrokerService.SendOffer:output_type -> heint.Response
-	7,  // 20: heint.BrokerService.SendEstado:output_type -> heint.Estado
-	0,  // 21: heint.BrokerService.SendReserva:output_type -> heint.Response
-	0,  // 22: heint.BrokerService.SendBaggage:output_type -> heint.Response
-	6,  // 23: heint.BrokerService.ObtenerEstadoYAsignacion:output_type -> heint.ResponseEstadoAsignado
-	6,  // 24: heint.DataNodeService.ObtenerEstado:output_type -> heint.ResponseEstadoAsignado
-	0,  // 25: heint.DataNodeService.EscribirReserva:output_type -> heint.Response
-	0,  // 26: heint.DataNodeService.UpdateFlightState:output_type -> heint.Response
-	5,  // 27: heint.AsignadorService.AsignarDataNode:output_type -> heint.ResponseAsignar
-	6,  // 28: heint.AsignadorService.ObtenerEstadoYAsignacion:output_type -> heint.ResponseEstadoAsignado
-	11, // 29: heint.Consensus.RequestVote:output_type -> heint.VoteResponse
-	14, // 30: heint.Consensus.AppendEntries:output_type -> heint.AppendResponse
-	16, // 31: heint.Consensus.Propose:output_type -> heint.ConsensusReply
-	18, // 32: heint.InfoService.GetFlightStatus:output_type -> heint.FlightResponse
-	19, // [19:33] is the sub-list for method output_type
-	5,  // [5:19] is the sub-list for method input_type
-	5,  // [5:5] is the sub-list for extension type_name
-	5,  // [5:5] is the sub-list for extension extendee
-	0,  // [0:5] is the sub-list for field type_name
+	13, // 0: heint.AsientoSelect.vector_clock:type_name -> heint.VectorClock
+	13, // 1: heint.SeatReplica.vector_clock:type_name -> heint.VectorClock
+	13, // 2: heint.FlightUpdate.vector_clock:type_name -> heint.VectorClock
+	13, // 3: heint.FlightReplica.vector_clock:type_name -> heint.VectorClock
+	4,  // 4: heint.GossipRequest.flights:type_name -> heint.FlightReplica
+	2,  // 5: heint.GossipRequest.seats:type_name -> heint.SeatReplica
+	23, // 6: heint.ResponseEstadoAsignado.asientos:type_name -> heint.ResponseEstadoAsignado.AsientosEntry
+	24, // 7: heint.Estado.asientos_disponibles:type_name -> heint.Estado.AsientosDisponiblesEntry
+	25, // 8: heint.VectorClock.clocks:type_name -> heint.VectorClock.ClocksEntry
+	16, // 9: heint.AppendRequest.entries:type_name -> heint.LogEntry
+	0,  // 10: heint.BrokerService.SendOffer:input_type -> heint.Response
+	0,  // 11: heint.BrokerService.SendEstado:input_type -> heint.Response
+	1,  // 12: heint.BrokerService.SendReserva:input_type -> heint.AsientoSelect
+	7,  // 13: heint.BrokerService.SendBaggage:input_type -> heint.FactBaggage
+	8,  // 14: heint.BrokerService.ObtenerEstadoYAsignacion:input_type -> heint.SolicitudEstado
+	8,  // 15: heint.DataNodeService.ObtenerEstado:input_type -> heint.SolicitudEstado
+	1,  // 16: heint.DataNodeService.EscribirReserva:input_type -> heint.AsientoSelect
+	3,  // 17: heint.DataNodeService.UpdateFlightState:input_type -> heint.FlightUpdate
+	5,  // 18: heint.DataNodeService.Gossip:input_type -> heint.GossipRequest
+	9,  // 19: heint.AsignadorService.AsignarDataNode:input_type -> heint.RequestAsignar
+	8,  // 20: heint.AsignadorService.ObtenerEstadoYAsignacion:input_type -> heint.SolicitudEstado
+	14, // 21: heint.Consensus.RequestVote:input_type -> heint.VoteRequest
+	17, // 22: heint.Consensus.AppendEntries:input_type -> heint.AppendRequest
+	19, // 23: heint.Consensus.Propose:input_type -> heint.Proposal
+	21, // 24: heint.InfoService.GetFlightStatus:input_type -> heint.FlightRequest
+	0,  // 25: heint.BrokerService.SendOffer:output_type -> heint.Response
+	12, // 26: heint.BrokerService.SendEstado:output_type -> heint.Estado
+	0,  // 27: heint.BrokerService.SendReserva:output_type -> heint.Response
+	0,  // 28: heint.BrokerService.SendBaggage:output_type -> heint.Response
+	11, // 29: heint.BrokerService.ObtenerEstadoYAsignacion:output_type -> heint.ResponseEstadoAsignado
+	11, // 30: heint.DataNodeService.ObtenerEstado:output_type -> heint.ResponseEstadoAsignado
+	0,  // 31: heint.DataNodeService.EscribirReserva:output_type -> heint.Response
+	0,  // 32: heint.DataNodeService.UpdateFlightState:output_type -> heint.Response
+	6,  // 33: heint.DataNodeService.Gossip:output_type -> heint.GossipResponse
+	10, // 34: heint.AsignadorService.AsignarDataNode:output_type -> heint.ResponseAsignar
+	11, // 35: heint.AsignadorService.ObtenerEstadoYAsignacion:output_type -> heint.ResponseEstadoAsignado
+	15, // 36: heint.Consensus.RequestVote:output_type -> heint.VoteResponse
+	18, // 37: heint.Consensus.AppendEntries:output_type -> heint.AppendResponse
+	20, // 38: heint.Consensus.Propose:output_type -> heint.ConsensusReply
+	22, // 39: heint.InfoService.GetFlightStatus:output_type -> heint.FlightResponse
+	25, // [25:40] is the sub-list for method output_type
+	10, // [10:25] is the sub-list for method input_type
+	10, // [10:10] is the sub-list for extension type_name
+	10, // [10:10] is the sub-list for extension extendee
+	0,  // [0:10] is the sub-list for field type_name
 }
 
 func init() { file_proto_greeter_proto_init() }
@@ -1246,7 +1546,7 @@ func file_proto_greeter_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_greeter_proto_rawDesc), len(file_proto_greeter_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   22,
+			NumMessages:   26,
 			NumExtensions: 0,
 			NumServices:   5,
 		},

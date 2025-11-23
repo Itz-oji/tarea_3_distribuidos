@@ -14,9 +14,26 @@ import (
 type Node struct {
 	nodeID          string
 	brokerAddr      string
-	lastRequestID   string
 	lastSeatChoosed string
+	localClock      map[string]int32
 }
+
+// =================== UTILIDADES DE RELOJ ===================
+
+func (n *Node) initClock() {
+	n.localClock = make(map[string]int32)
+	n.localClock[n.nodeID] = 0
+}
+
+func (n *Node) tickClock() {
+	n.localClock[n.nodeID]++
+}
+
+func (n *Node) generarClockMsg() *proto.VectorClock {
+	return &proto.VectorClock{Clocks: n.localClock}
+}
+
+// =================== CONSULTAR ESTADO ===================
 
 func (n *Node) EstadoSistema() (map[string]bool, bool) {
 	conn, err := grpc.Dial(n.brokerAddr, grpc.WithInsecure())
@@ -34,22 +51,41 @@ func (n *Node) EstadoSistema() (map[string]bool, bool) {
 		return nil, false
 	}
 
-	log.Printf("[%s] Estado del sistema recibido:", n.nodeID)
-	for asiento, disponible := range resp.AsientosDisponibles {
-		estado := "Ocupado"
-		if disponible {
-			estado = "Libre"
+	// =================== IMPRIMIR MATRIZ ===================
+	log.Printf("\n[%s] Estado del sistema (L=Libre, X=Ocupado)\n", n.nodeID)
+
+	// Encabezado con números 1–21
+	header := "      "
+	for i := 1; i <= 21; i++ {
+		header += strconv.Itoa(i)
+		if i < 10 {
+			header += "   "
+		} else {
+			header += "  "
 		}
-		log.Printf("  → %s: %s", asiento, estado)
 	}
+	log.Println(header)
+
+	// Filas de A a F
+	for _, row := range []string{"A", "B", "C", "D", "E", "F"} {
+		linea := row + "  |  "
+		for num := 1; num <= 21; num++ {
+			seatID := row + strconv.Itoa(num)
+			libre, exists := resp.AsientosDisponibles[seatID]
+			if !exists || libre {
+				linea += "L   "
+			} else {
+				linea += "X   "
+			}
+		}
+		log.Println(linea)
+	}
+	log.Println("")
 
 	return resp.AsientosDisponibles, true
 }
 
-func (n *Node) generarID() string {
-	// Ejemplo: REQ-RYW1-172899213123123
-	return "REQ-" + n.nodeID + "-" + strconv.FormatInt(time.Now().UnixNano(), 10)
-}
+// =================== RESERVAR ASIENTO ===================
 
 func (n *Node) ReservarAsiento(asiento string) bool {
 	conn, err := grpc.Dial(n.brokerAddr, grpc.WithInsecure())
@@ -61,24 +97,28 @@ func (n *Node) ReservarAsiento(asiento string) bool {
 
 	client := proto.NewBrokerServiceClient(conn)
 
-	reqID := n.generarID()
-	n.lastRequestID = reqID
-	n.lastSeatChoosed = asiento
+	// Incremento de reloj
+	n.tickClock()
 
-	// Enviar reserva
-	log.Printf("[%s] Reservando asiento %s con ID %s...", n.nodeID, asiento, reqID)
+	log.Printf("[%s] Reservando asiento %s...", n.nodeID, asiento)
 	resp, err := client.SendReserva(context.Background(), &proto.AsientoSelect{
-		AsientoID: reqID,
-		Asiento:   asiento,
+		ClienteId:   n.nodeID,
+		Asiento:     asiento,
+		VectorClock: n.generarClockMsg(),
 	})
+
 	if err != nil {
 		log.Printf("[%s] ERROR al reservar asiento %s: %v", n.nodeID, asiento, err)
 		return false
 	}
 
 	log.Printf("[%s] Coordinador respondió: %s", n.nodeID, resp.Mensaje)
-	return true
+	n.lastSeatChoosed = asiento
+
+	return resp.Ok
 }
+
+// =================== VALIDAR READ-YOUR-WRITES ===================
 
 func (n *Node) ValidarRYW() bool {
 	asientos, ok := n.EstadoSistema()
@@ -87,33 +127,33 @@ func (n *Node) ValidarRYW() bool {
 		return false
 	}
 
-	// Validar que el asiento reservado esté ahora en "ocupado"
 	if libre := asientos[n.lastSeatChoosed]; libre {
-		log.Printf("[%s] RYW VIOLADO! Asiento %s sigue libre después de escribir con ID %s",
-			n.nodeID, n.lastSeatChoosed, n.lastRequestID)
+		log.Printf("[%s] ❌ RYW VIOLADO! Asiento %s sigue libre después de escribir.\n",
+			n.nodeID, n.lastSeatChoosed)
 		return false
 	}
 
-	log.Printf("[%s] ✔ READ-YOUR-WRITES VALIDADO! Asiento %s aparece ocupado tras la reserva.",
+	log.Printf("[%s] ✔ RYW VALIDADO! Asiento %s aparece ocupado tras escribir.\n",
 		n.nodeID, n.lastSeatChoosed)
 	return true
 }
+
+// =================== MAIN ===================
 
 func main() {
 	nodo := &Node{
 		nodeID:     "RYW1",
 		brokerAddr: "coordinador:54000",
 	}
+	nodo.initClock()
 
 	for {
-		// Paso 1: Consultar estado
 		asientos, ok := nodo.EstadoSistema()
 		if !ok {
 			time.Sleep(3 * time.Second)
 			continue
 		}
 
-		// Paso 2: Elegir el primer asiento libre
 		asientoLibre := ""
 		for asiento, libre := range asientos {
 			if libre {
@@ -128,16 +168,14 @@ func main() {
 			continue
 		}
 
-		// Paso 3: Enviar reserva de asiento
 		if !nodo.ReservarAsiento(asientoLibre) {
 			time.Sleep(2 * time.Second)
 			continue
 		}
 
-		// Paso 3 & 4: Confirmación inmediata + Validación RYW
-		time.Sleep(2 * time.Second)
+		time.Sleep(1 * time.Second)
 		nodo.ValidarRYW()
 
-		time.Sleep(5 * time.Second)
+		time.Sleep(4 * time.Second)
 	}
 }

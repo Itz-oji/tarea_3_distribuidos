@@ -68,6 +68,7 @@ services:
   # ====================
   # MV2
   # ====================
+
   ryw2:
     image: tarea_3-ryw2
     build:
@@ -76,9 +77,12 @@ services:
     container_name: RYW2
     profiles: ["mv2"]
     environment:
-      - SERVICE_NAME=RYW2
+      -  NODE_ID=RYW2
+    restart: always
     networks:
       - red_global
+    ports:
+      - "51002:51002"
 
   mr2:
     image: tarea_3-mr2
@@ -109,6 +113,8 @@ services:
   # ====================
   # MV3
   # ====================
+
+  
   ryw3:
     image: tarea_3-ryw3
     build:
@@ -117,11 +123,12 @@ services:
     container_name: RYW3
     profiles: ["mv3"]
     environment:
-      - SERVICE_NAME=RYW3
-      - GRPC_PORT=51110
-      - DB_HOST=10.35.168.59:51000
+      - NODE_ID=RYW3
+    restart: always
     networks:
       - red_global
+    ports:
+      - "51003:51003"
 
   datanode1:
     image: tarea_3-datanode1

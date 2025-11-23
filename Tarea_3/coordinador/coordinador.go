@@ -10,7 +10,10 @@ import (
 	proto "heint/proto"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
+
+// -------------------- Sticky Session --------------------
 
 type StickySession struct {
 	Datanode string
@@ -22,61 +25,10 @@ const TTL_STICKY = 2 * time.Minute
 type Coordinador struct {
 	proto.UnimplementedBrokerServiceServer
 	mu            sync.Mutex
-	stickySession map[string]StickySession
+	stickySession map[string]StickySession // clave = cliente_id
 }
 
-func (c *Coordinador) requestDataNodeFromBroker(client string) string {
-	// Conectar hacia el Broker real
-	conn, err := grpc.Dial("broker:60000", grpc.WithInsecure()) // <--- broker verdadero
-	if err != nil {
-		log.Printf("[COORD] Error pidiendo nodo al broker: %v", err)
-		return ""
-	}
-	defer conn.Close()
-
-	brokerClient := proto.NewAsignadorServiceClient(conn) // <- servicio que elige DataNode
-
-	resp, err := brokerClient.AsignarDataNode(context.Background(),
-		&proto.RequestAsignar{Cliente: client})
-	if err != nil {
-		log.Printf("[COORD] Broker no pudo asignar nodo: %v", err)
-		return ""
-	}
-
-	return resp.Datanode
-}
-
-func (c *Coordinador) getDataNodeForClient(client string) string {
-	c.mu.Lock()
-	info, exists := c.stickySession[client]
-	c.mu.Unlock()
-
-	if exists && time.Now().Before(info.Expire) {
-		return info.Datanode
-	}
-
-	assigned := c.requestDataNodeFromBroker(client)
-	if assigned == "" {
-		return ""
-	}
-
-	c.saveSticky(client, assigned)
-	return assigned
-}
-
-func (c *Coordinador) SendEstado(ctx context.Context, req *proto.Response) (*proto.Estado, error) {
-	clientID := req.Mensaje
-
-	// 1️⃣ Verificar si ya existe sticky session
-	datanode := c.getSticky(clientID)
-	if datanode != "" {
-		// 1.A️⃣ Ya existe DataNode → Preguntar directo al DataNode
-		return c.forwardEstadoToDataNode(clientID, datanode)
-	}
-
-	// 2️⃣ NO EXISTE sticky → pedir al Broker asignación + estado
-	return c.requestEstadoFromBroker(clientID)
-}
+// -------------------- Utilidades Sticky --------------------
 
 func (c *Coordinador) getSticky(client string) string {
 	c.mu.Lock()
@@ -98,39 +50,62 @@ func (c *Coordinador) saveSticky(client, datanode string) {
 	c.mu.Unlock()
 }
 
-func (c *Coordinador) SendReserva(ctx context.Context, req *proto.AsientoSelect) (*proto.Response, error) {
-	clientID := req.AsientoID
+// -------------------- Pedir asignación al Broker --------------------
 
-	datanode := c.getDataNodeForClient(clientID)
-	if datanode == "" {
-		return &proto.Response{Mensaje: "No disponible"}, nil
-	}
-
-	log.Printf("[COORD] Enrutando reserva de %s a %s", clientID, datanode)
-
-	// Aquí el Coordinador solo reenvía, no valida
-	conn, err := grpc.Dial(datanode, grpc.WithInsecure())
+func (c *Coordinador) requestDataNodeFromBroker(client string) string {
+	conn, err := grpc.Dial("broker:60000", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		log.Printf("[COORD] Error reenviando a datanode: %v", err)
-		return &proto.Response{Mensaje: "Error de red"}, nil
+		log.Printf("[COORD] Error conectando a broker: %v", err)
+		return ""
 	}
 	defer conn.Close()
 
-	nodeClient := proto.NewDataNodeServiceClient(conn)
-	return nodeClient.EscribirReserva(ctx, req)
+	brokerClient := proto.NewAsignadorServiceClient(conn)
+	resp, err := brokerClient.AsignarDataNode(context.Background(), &proto.RequestAsignar{Cliente: client})
+	if err != nil {
+		log.Printf("[COORD] Error asignando nodo: %v", err)
+		return ""
+	}
+	return resp.Datanode
+}
+
+// Devuelve DataNode al que debe ir este cliente
+func (c *Coordinador) getDataNodeForClient(client string) string {
+	// revisar sticky existente
+	if dn := c.getSticky(client); dn != "" {
+		return dn
+	}
+	// pedir asignación nueva
+	assigned := c.requestDataNodeFromBroker(client)
+	if assigned != "" {
+		c.saveSticky(client, assigned)
+	}
+	return assigned
+}
+
+// -------------------- Estado del sistema --------------------
+
+func (c *Coordinador) SendEstado(ctx context.Context, req *proto.Response) (*proto.Estado, error) {
+	clientID := req.Mensaje // << Cliente envía su ID en Response.Mensaje
+
+	datanode := c.getSticky(clientID)
+	if datanode != "" {
+		return c.forwardEstadoToDataNode(clientID, datanode)
+	}
+	return c.requestEstadoFromBroker(clientID)
 }
 
 func (c *Coordinador) forwardEstadoToDataNode(client, datanode string) (*proto.Estado, error) {
-	log.Printf("[COORD] Cliente %s tiene sticky → preguntar a %s", client, datanode)
+	log.Printf("[COORD] Cliente %s → leyendo desde sticky en %s", client, datanode)
 
-	conn, err := grpc.Dial(datanode, grpc.WithInsecure())
+	conn, err := grpc.Dial(datanode, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, err
 	}
 	defer conn.Close()
 
-	nodeClient := proto.NewDataNodeServiceClient(conn)
-	resp, err := nodeClient.ObtenerEstado(context.Background(), &proto.SolicitudEstado{Cliente: client})
+	clientDN := proto.NewDataNodeServiceClient(conn)
+	resp, err := clientDN.ObtenerEstado(context.Background(), &proto.SolicitudEstado{Cliente: client})
 	if err != nil {
 		return nil, err
 	}
@@ -142,22 +117,21 @@ func (c *Coordinador) forwardEstadoToDataNode(client, datanode string) (*proto.E
 }
 
 func (c *Coordinador) requestEstadoFromBroker(client string) (*proto.Estado, error) {
-	log.Printf("[COORD] Cliente %s sin sticky → pedir al broker", client)
+	log.Printf("[COORD] Cliente %s sin sticky → consultando broker", client)
 
-	conn, err := grpc.Dial("broker:60000", grpc.WithInsecure())
+	conn, err := grpc.Dial("broker:60000", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, err
 	}
 	defer conn.Close()
 
 	brokerClient := proto.NewAsignadorServiceClient(conn)
-
 	resp, err := brokerClient.ObtenerEstadoYAsignacion(context.Background(), &proto.SolicitudEstado{Cliente: client})
 	if err != nil {
 		return nil, err
 	}
 
-	// Guardar Sticky asignado por el broker
+	// guardar sticky con el nodo asignado
 	c.saveSticky(client, resp.Datanode)
 
 	return &proto.Estado{
@@ -166,6 +140,36 @@ func (c *Coordinador) requestEstadoFromBroker(client string) (*proto.Estado, err
 	}, nil
 }
 
+// -------------------- Redirigir Escrituras con RYW --------------------
+
+func (c *Coordinador) SendReserva(ctx context.Context, req *proto.AsientoSelect) (*proto.Response, error) {
+	clientID := req.ClienteId // << NUEVO: se usa cliente_id, no AsientoID
+
+	datanode := c.getDataNodeForClient(clientID)
+	if datanode == "" {
+		return &proto.Response{Mensaje: "No hay DataNodes disponibles", Ok: false}, nil
+	}
+
+	conn, err := grpc.Dial(datanode, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		return &proto.Response{Mensaje: "Error de red", Ok: false}, nil
+	}
+	defer conn.Close()
+
+	clientDN := proto.NewDataNodeServiceClient(conn)
+	resp, err := clientDN.EscribirReserva(ctx, req)
+
+	if err == nil && resp.Ok {
+		// Guardar que este cliente debe seguir leyendo de este nodo
+		c.saveSticky(clientID, datanode)
+		log.Printf("[COORD] Sticky aplicado → %s leerá desde %s", clientID, datanode)
+	}
+
+	return resp, err
+}
+
+// -------------------- MAIN --------------------
+
 func main() {
 	lis, err := net.Listen("tcp", ":54000")
 	if err != nil {
@@ -173,14 +177,12 @@ func main() {
 	}
 
 	server := grpc.NewServer()
-	coordinador := &Coordinador{
+	coord := &Coordinador{
 		stickySession: make(map[string]StickySession),
 	}
 
-	proto.RegisterBrokerServiceServer(server, coordinador)
+	proto.RegisterBrokerServiceServer(server, coord)
 
-	log.Println("[COORD] Servidor iniciado en :54000")
-	if err := server.Serve(lis); err != nil {
-		log.Fatalf("Error al iniciar gRPC server: %v", err)
-	}
+	log.Println("[COORD] Servidor RYW iniciado en :54000")
+	server.Serve(lis)
 }

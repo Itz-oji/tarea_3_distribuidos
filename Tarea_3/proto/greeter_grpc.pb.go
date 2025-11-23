@@ -29,6 +29,8 @@ const (
 // BrokerServiceClient is the client API for BrokerService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+//
+// Coordinador interactúa con el Broker
 type BrokerServiceClient interface {
 	SendOffer(ctx context.Context, in *Response, opts ...grpc.CallOption) (*Response, error)
 	SendEstado(ctx context.Context, in *Response, opts ...grpc.CallOption) (*Estado, error)
@@ -98,6 +100,8 @@ func (c *brokerServiceClient) ObtenerEstadoYAsignacion(ctx context.Context, in *
 // BrokerServiceServer is the server API for BrokerService service.
 // All implementations must embed UnimplementedBrokerServiceServer
 // for forward compatibility.
+//
+// Coordinador interactúa con el Broker
 type BrokerServiceServer interface {
 	SendOffer(context.Context, *Response) (*Response, error)
 	SendEstado(context.Context, *Response) (*Estado, error)
@@ -276,15 +280,22 @@ const (
 	DataNodeService_ObtenerEstado_FullMethodName     = "/heint.DataNodeService/ObtenerEstado"
 	DataNodeService_EscribirReserva_FullMethodName   = "/heint.DataNodeService/EscribirReserva"
 	DataNodeService_UpdateFlightState_FullMethodName = "/heint.DataNodeService/UpdateFlightState"
+	DataNodeService_Gossip_FullMethodName            = "/heint.DataNodeService/Gossip"
 )
 
 // DataNodeServiceClient is the client API for DataNodeService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+//
+// Datanode: NO CONSENSO. Solo causalidad + Gossip
 type DataNodeServiceClient interface {
 	ObtenerEstado(ctx context.Context, in *SolicitudEstado, opts ...grpc.CallOption) (*ResponseEstadoAsignado, error)
+	// Escritura eventual con relojes vectoriales
 	EscribirReserva(ctx context.Context, in *AsientoSelect, opts ...grpc.CallOption) (*Response, error)
+	// Update eventual de vuelos
 	UpdateFlightState(ctx context.Context, in *FlightUpdate, opts ...grpc.CallOption) (*Response, error)
+	// Sincronización periódica (Gossip)
+	Gossip(ctx context.Context, in *GossipRequest, opts ...grpc.CallOption) (*GossipResponse, error)
 }
 
 type dataNodeServiceClient struct {
@@ -325,13 +336,29 @@ func (c *dataNodeServiceClient) UpdateFlightState(ctx context.Context, in *Fligh
 	return out, nil
 }
 
+func (c *dataNodeServiceClient) Gossip(ctx context.Context, in *GossipRequest, opts ...grpc.CallOption) (*GossipResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GossipResponse)
+	err := c.cc.Invoke(ctx, DataNodeService_Gossip_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // DataNodeServiceServer is the server API for DataNodeService service.
 // All implementations must embed UnimplementedDataNodeServiceServer
 // for forward compatibility.
+//
+// Datanode: NO CONSENSO. Solo causalidad + Gossip
 type DataNodeServiceServer interface {
 	ObtenerEstado(context.Context, *SolicitudEstado) (*ResponseEstadoAsignado, error)
+	// Escritura eventual con relojes vectoriales
 	EscribirReserva(context.Context, *AsientoSelect) (*Response, error)
+	// Update eventual de vuelos
 	UpdateFlightState(context.Context, *FlightUpdate) (*Response, error)
+	// Sincronización periódica (Gossip)
+	Gossip(context.Context, *GossipRequest) (*GossipResponse, error)
 	mustEmbedUnimplementedDataNodeServiceServer()
 }
 
@@ -350,6 +377,9 @@ func (UnimplementedDataNodeServiceServer) EscribirReserva(context.Context, *Asie
 }
 func (UnimplementedDataNodeServiceServer) UpdateFlightState(context.Context, *FlightUpdate) (*Response, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateFlightState not implemented")
+}
+func (UnimplementedDataNodeServiceServer) Gossip(context.Context, *GossipRequest) (*GossipResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Gossip not implemented")
 }
 func (UnimplementedDataNodeServiceServer) mustEmbedUnimplementedDataNodeServiceServer() {}
 func (UnimplementedDataNodeServiceServer) testEmbeddedByValue()                         {}
@@ -426,6 +456,24 @@ func _DataNodeService_UpdateFlightState_Handler(srv interface{}, ctx context.Con
 	return interceptor(ctx, in, info, handler)
 }
 
+func _DataNodeService_Gossip_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GossipRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DataNodeServiceServer).Gossip(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DataNodeService_Gossip_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DataNodeServiceServer).Gossip(ctx, req.(*GossipRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // DataNodeService_ServiceDesc is the grpc.ServiceDesc for DataNodeService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -445,6 +493,10 @@ var DataNodeService_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "UpdateFlightState",
 			Handler:    _DataNodeService_UpdateFlightState_Handler,
 		},
+		{
+			MethodName: "Gossip",
+			Handler:    _DataNodeService_Gossip_Handler,
+		},
 	},
 	Streams:  []grpc.StreamDesc{},
 	Metadata: "proto/greeter.proto",
@@ -458,6 +510,8 @@ const (
 // AsignadorServiceClient is the client API for AsignadorService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+//
+// Broker registra nodos para balancear peticiones
 type AsignadorServiceClient interface {
 	AsignarDataNode(ctx context.Context, in *RequestAsignar, opts ...grpc.CallOption) (*ResponseAsignar, error)
 	ObtenerEstadoYAsignacion(ctx context.Context, in *SolicitudEstado, opts ...grpc.CallOption) (*ResponseEstadoAsignado, error)
@@ -494,6 +548,8 @@ func (c *asignadorServiceClient) ObtenerEstadoYAsignacion(ctx context.Context, i
 // AsignadorServiceServer is the server API for AsignadorService service.
 // All implementations must embed UnimplementedAsignadorServiceServer
 // for forward compatibility.
+//
+// Broker registra nodos para balancear peticiones
 type AsignadorServiceServer interface {
 	AsignarDataNode(context.Context, *RequestAsignar) (*ResponseAsignar, error)
 	ObtenerEstadoYAsignacion(context.Context, *SolicitudEstado) (*ResponseEstadoAsignado, error)
@@ -599,6 +655,8 @@ const (
 // ConsensusClient is the client API for Consensus service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+//
+// ------------------------ CONSENSO (se mantiene, pero Datanodes NO LO USAN) ------------------------
 type ConsensusClient interface {
 	RequestVote(ctx context.Context, in *VoteRequest, opts ...grpc.CallOption) (*VoteResponse, error)
 	AppendEntries(ctx context.Context, in *AppendRequest, opts ...grpc.CallOption) (*AppendResponse, error)
@@ -646,6 +704,8 @@ func (c *consensusClient) Propose(ctx context.Context, in *Proposal, opts ...grp
 // ConsensusServer is the server API for Consensus service.
 // All implementations must embed UnimplementedConsensusServer
 // for forward compatibility.
+//
+// ------------------------ CONSENSO (se mantiene, pero Datanodes NO LO USAN) ------------------------
 type ConsensusServer interface {
 	RequestVote(context.Context, *VoteRequest) (*VoteResponse, error)
 	AppendEntries(context.Context, *AppendRequest) (*AppendResponse, error)
@@ -775,6 +835,8 @@ const (
 // InfoServiceClient is the client API for InfoService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+//
+// ------------------------ SERVICIO OPCIONAL DE INFO ------------------------
 type InfoServiceClient interface {
 	GetFlightStatus(ctx context.Context, in *FlightRequest, opts ...grpc.CallOption) (*FlightResponse, error)
 }
@@ -800,6 +862,8 @@ func (c *infoServiceClient) GetFlightStatus(ctx context.Context, in *FlightReque
 // InfoServiceServer is the server API for InfoService service.
 // All implementations must embed UnimplementedInfoServiceServer
 // for forward compatibility.
+//
+// ------------------------ SERVICIO OPCIONAL DE INFO ------------------------
 type InfoServiceServer interface {
 	GetFlightStatus(context.Context, *FlightRequest) (*FlightResponse, error)
 	mustEmbedUnimplementedInfoServiceServer()

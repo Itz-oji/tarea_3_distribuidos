@@ -4,47 +4,92 @@ package heint;
 
 option go_package = "/proto;proto";
 
+// ------------------------ RESPUESTAS BASE ------------------------
 message Response {
     string mensaje = 1;
+    bool ok = 2;
 }
+
+// ------------------------ ASIENTOS ------------------------
 message AsientoSelect {
-    string asientoID = 1;
-    string asiento =2;
-}
-message FactBaggage {
-    string BaggageID = 1;
-    string Baggage = 2;
-}
-message SolicitudEstado {
-    string cliente = 1;
-}
-message RequestAsignar {
-    string cliente = 1;
-}
-message ResponseAsignar {
-    string datanode = 1;
-}
-message ResponseEstadoAsignado {
-    string datanode = 1;
-    string idSistema = 2;
-    map<string,bool> asientos = 3;
-}
-message Estado {
-    string id = 1;
-    map<string, bool> asientos_disponibles = 2;    
+    string cliente_id = 1;             // ID del cliente (NECESARIO para LWW)
+    string asiento = 2;                // ID del asiento ("A1", "B2", etc.)
+    VectorClock vector_clock = 3;      // Reloj vectorial para causalidad
 }
 
-message VectorClock {
-    map<string, int32> clocks = 1; 
+// Estado de asiento replicable
+message SeatReplica {
+    string asiento = 1;
+    bool taken = 2;                    // true = ocupado
+    string cliente_id = 3;             // último cliente ganador
+    VectorClock vector_clock = 4;
 }
 
+// ------------------------ VUELOS ------------------------
 message FlightUpdate {
     string flight_id = 1;
     string new_status = 2;
     string new_gate = 3;
-    VectorClock vector_clock = 4;
+    string airline_id = 4;             // TIE-BREAK determinista
+    VectorClock vector_clock = 5;      // causalidad
 }
 
+// Estado de vuelo replicable
+message FlightReplica {
+    string flight_id = 1;
+    string status = 2;
+    string gate = 3;
+    string airline_id = 4;
+    VectorClock vector_clock = 5;
+}
+
+// ------------------------ GOSSIP ENTRE DATANODES ------------------------
+message GossipRequest {
+    repeated FlightReplica flights = 1;
+    repeated SeatReplica seats = 2;
+}
+
+message GossipResponse {}
+
+// ------------------------ CONSULTAS GENERALES ------------------------
+message FactBaggage {
+    string BaggageID = 1;
+    string Baggage = 2;
+}
+
+message SolicitudEstado {
+    string cliente = 1;
+}
+
+message RequestAsignar {
+    string cliente = 1;
+}
+
+// El broker devuelve SOLO estructuras visibles a cliente/coordinador
+message ResponseAsignar {
+    string datanode = 1;
+}
+
+// Para Coordinador → Cliente
+message ResponseEstadoAsignado {
+    string datanode = 1;
+    string idSistema = 2;
+    map<string,bool> asientos = 3; // Visible para cliente (no enviar relojes aquí)
+}
+
+message Estado {
+    string id = 1;
+    map<string, bool> asientos_disponibles = 2;
+}
+
+// ------------------------ VECTOR CLOCK ------------------------
+message VectorClock {
+    map<string, int32> clocks = 1;
+}
+
+// ------------------------ SERVICIOS ------------------------
+
+// Coordinador interactúa con el Broker
 service BrokerService {
     rpc SendOffer (Response) returns (Response);
     rpc SendEstado (Response) returns (Estado);
@@ -53,23 +98,32 @@ service BrokerService {
     rpc ObtenerEstadoYAsignacion(SolicitudEstado) returns (ResponseEstadoAsignado);
 }
 
+// Datanode: NO CONSENSO. Solo causalidad + Gossip
 service DataNodeService {
     rpc ObtenerEstado (SolicitudEstado) returns (ResponseEstadoAsignado);
+
+    // Escritura eventual con relojes vectoriales
     rpc EscribirReserva (AsientoSelect) returns (Response);
-    rpc UpdateFlightState (FlightUpdate) returns (Response); 
+
+    // Update eventual de vuelos
+    rpc UpdateFlightState (FlightUpdate) returns (Response);
+
+    // Sincronización periódica (Gossip)
+    rpc Gossip (GossipRequest) returns (GossipResponse);
 }
 
+// Broker registra nodos para balancear peticiones
 service AsignadorService {
     rpc AsignarDataNode(RequestAsignar) returns (ResponseAsignar);
     rpc ObtenerEstadoYAsignacion(SolicitudEstado) returns (ResponseEstadoAsignado);
 }
 
+// ------------------------ CONSENSO (se mantiene, pero Datanodes NO LO USAN) ------------------------
 service Consensus {
-  rpc RequestVote (VoteRequest) returns (VoteResponse) {}
-  rpc AppendEntries (AppendRequest) returns (AppendResponse) {}
-  rpc Propose (Proposal) returns (ConsensusReply) {}
+  rpc RequestVote (VoteRequest) returns (VoteResponse);
+  rpc AppendEntries (AppendRequest) returns (AppendResponse);
+  rpc Propose (Proposal) returns (ConsensusReply);
 }
-
 
 message VoteRequest {
   int32 term = 1;
@@ -78,12 +132,10 @@ message VoteRequest {
   int32 last_log_term = 4;
 }
 
-
 message VoteResponse {
   int32 term = 1;
   bool vote_granted = 2;
 }
-
 
 message LogEntry {
   int32 term = 1;
@@ -98,7 +150,6 @@ message AppendRequest {
   repeated LogEntry entries = 5;
   int32 leader_commit = 6;
 }
-
 
 message AppendResponse {
   int32 term = 1;
@@ -116,8 +167,9 @@ message ConsensusReply {
   string leader_id = 3;
 }
 
+// ------------------------ SERVICIO OPCIONAL DE INFO ------------------------
 service InfoService {
-  rpc GetFlightStatus (FlightRequest) returns (FlightResponse) {}
+  rpc GetFlightStatus (FlightRequest) returns (FlightResponse);
 }
 
 message FlightRequest {
