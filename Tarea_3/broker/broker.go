@@ -97,7 +97,7 @@ func main() {
 	broker := &Broker{
 		datanodes: []string{
 			"datanode1:58000",
-			"datanode2:52000",
+			"datanode2:59000",
 			"datanode3:57000",
 		},
 		rrIndex: 0,

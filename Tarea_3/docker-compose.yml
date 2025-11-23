@@ -13,14 +13,13 @@ services:
     profiles: ["mv1"]
     environment:
       - NODE_ID=RYW1
-      - GRPC_PORT=51000
     restart: always
     networks:
       - red_global
     ports:
-      - "52041:51000"
+      - "51001:51001"
 
-  MR1:
+  mr1:
     image: tarea_3-mr1
     build:
       context: .
@@ -69,7 +68,7 @@ services:
   # ====================
   # MV2
   # ====================
-  RYW2:
+  ryw2:
     image: tarea_3-ryw2
     build:
       context: .
@@ -78,11 +77,10 @@ services:
     profiles: ["mv2"]
     environment:
       - SERVICE_NAME=RYW2
-      - BROKER_HOST=10.35.168.62:55000
     networks:
       - red_global
 
-  MR2:
+  mr2:
     image: tarea_3-mr2
     build:
       context: .
@@ -91,7 +89,6 @@ services:
     profiles: ["mv2"]
     environment:
       - SERVICE_NAME=MR2
-      - BROKER_HOST=10.35.168.62:55000
     restart: always
     networks:
       - red_global
@@ -103,16 +100,16 @@ services:
       dockerfile: ./consenso1/Dockerfile.consenso1
     container_name: consenso1
     profiles: ["mv2"]
-    environment:
-      - SERVICE_NAME=consenso1
-      - BROKER_HOST=10.35.168.62:55000
+    restart: always
     networks:
       - red_global
+    ports:
+      - "57770:57770"
 
   # ====================
   # MV3
   # ====================
-  RYW3:
+  ryw3:
     image: tarea_3-ryw3
     build:
       context: .
@@ -123,7 +120,6 @@ services:
       - SERVICE_NAME=RYW3
       - GRPC_PORT=51110
       - DB_HOST=10.35.168.59:51000
-      - BROKER_HOST=10.35.168.62:54000
     networks:
       - red_global
 
@@ -145,14 +141,12 @@ services:
       context: .
       dockerfile: ./consenso2/Dockerfile.consenso2
     container_name: consenso2
-    profiles: ["mv3"]
-    environment:
-      - SERVICE_NAME=consenso2
-      - GRPC_PORT=57770
-      - DB_HOST=10.35.168.59:57000
-      - BROKER_HOST=10.35.168.62:54000
+    profiles: ["mv2"]
+    restart: always
     networks:
       - red_global
+    ports:
+      - "57771:57771"
 
   # ====================
   # MV4 - BROKER
@@ -167,7 +161,6 @@ services:
     profiles: ["mv4"]
     environment:
       - SERVICE_NAME=coordinador
-      - GRPC_PORT=54000
     ports:
       - "54000:54000"
     networks:
@@ -191,14 +184,12 @@ services:
       context: .
       dockerfile: ./consenso3/Dockerfile.consenso3
     container_name: consenso3
-    profiles: ["mv4"]
-    environment:
-      - SERVICE_NAME=consenso3
-      - GRPC_PORT=57770
-      - DB_HOST=10.35.168.59:57000
-      - BROKER_HOST=10.35.168.62:54000
+    profiles: ["mv2"]
+    restart: always
     networks:
       - red_global
+    ports:
+      - "57772:57772"
 
 
 # ====================

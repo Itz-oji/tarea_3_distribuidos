@@ -33,18 +33,32 @@ message Estado {
     string id = 1;
     map<string, bool> asientos_disponibles = 2;    
 }
+
+message VectorClock {
+    map<string, int32> clocks = 1; 
+}
+
+message FlightUpdate {
+    string flight_id = 1;
+    string new_status = 2;
+    string new_gate = 3;
+    VectorClock vector_clock = 4;
+}
+
 service BrokerService {
-    // Recibe una oferta de un productor
     rpc SendOffer (Response) returns (Response);
     rpc SendEstado (Response) returns (Estado);
     rpc SendReserva (AsientoSelect) returns (Response);
     rpc SendBaggage (FactBaggage) returns (Response);
     rpc ObtenerEstadoYAsignacion(SolicitudEstado) returns (ResponseEstadoAsignado);
 }
+
 service DataNodeService {
     rpc ObtenerEstado (SolicitudEstado) returns (ResponseEstadoAsignado);
     rpc EscribirReserva (AsientoSelect) returns (Response);
+    rpc UpdateFlightState (FlightUpdate) returns (Response); 
 }
+
 service AsignadorService {
     rpc AsignarDataNode(RequestAsignar) returns (ResponseAsignar);
     rpc ObtenerEstadoYAsignacion(SolicitudEstado) returns (ResponseEstadoAsignado);
@@ -99,6 +113,7 @@ message Proposal {
 message ConsensusReply {
   bool success = 1;
   string result = 2;
+  string leader_id = 3;
 }
 
 service InfoService {
