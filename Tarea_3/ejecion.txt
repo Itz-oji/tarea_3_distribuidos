@@ -15,7 +15,7 @@
 # ejecute esta linea para ver el archivo de las ofertas de consumidor:
 docker cp consumidor2:/app/offers/C2-1_historial.csv .
 
-broken: 54000
+broker: 54000
 DB1: 51000
 DB2: 52000
 BD3: 57000

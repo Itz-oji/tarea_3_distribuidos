@@ -2,95 +2,128 @@ package main
 
 import (
 	"context"
-	"encoding/csv"
-	"fmt"
+	"flag"
 	"log"
 	"math/rand"
-	"os"
-	"strconv"
+	"strings"
 	"time"
 
-	proto "example1/proto"
-
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+
+	flightpb "heint/proto"
 )
 
-func main() {
-	conn, err := grpc.Dial("10.35.168.62:55000", grpc.WithInsecure(), grpc.WithBlock())
-	if err != nil {
-		log.Fatalf("Error al conectar con el broker: %v", err)
-	}
-	defer conn.Close()
+// MRClient representa un cliente que consulta el estado de vuelos al broker.
+type MRClient struct {
+	id       string                     // identificador del cliente
+	client   flightpb.InfoServiceClient // cliente gRPC al broker
+	flights  []string                   // lista de vuelos a consultar
+	versions map[string]int64           // versiones conocidas de cada vuelo
+	interval time.Duration              // intervalo entre consultas
+}
 
-	client := proto.NewBrokerServiceClient(conn)
+// NewMRClient crea un nuevo cliente MR.
+func NewMRClient(id string, cli flightpb.InfoServiceClient, flights []string, interval time.Duration) *MRClient {
+	versions := make(map[string]int64) // mapa de versiones por vuelo
 
-	producerID := "Parisio-01"
-	regResp, err := client.RegisterProducer(context.Background(), &proto.RegisterRequest{ProducerId: producerID, Store: "Parisio"})
-	if err != nil || regResp == nil || !regResp.Ok {
-		log.Fatalf("Registro de productor falló: %v, resp: %v", err, regResp)
-	}
-
-	f, err := os.Open("parisio_catalogo.csv")
-	if err != nil {
-		log.Fatalf("No se pudo abrir catálogo: %v", err)
-	}
-	defer f.Close()
-	r := csv.NewReader(f)
-	records, err := r.ReadAll()
-	if err != nil {
-		log.Fatalf("Error leyendo CSV: %v", err)
+	// Inicializar versiones en 0
+	for _, f := range flights {
+		versions[f] = 0
 	}
 
-	type Item struct {
-		Category, Product string
-		Price             float64
-		Stock             int32
-	}
-	var items []Item
-	for i, row := range records {
-		if i == 0 {
-			continue
-		}
-		if len(row) < 6 {
-			continue
-		}
-		precio, _ := strconv.ParseFloat(row[4], 64)
-		stk64, _ := strconv.ParseInt(row[5], 10, 32)
-		items = append(items, Item{row[2], row[3], precio, int32(stk64)})
-	}
-	if len(items) == 0 {
-		log.Fatalf("Catálogo vacío para Parisio")
-	}
-
-	rand.Seed(time.Now().UnixNano())
-	for {
-		time.Sleep(time.Duration(1000+rand.Intn(1000)) * time.Millisecond)
-		it := items[rand.Intn(len(items))]
-		discount := 0.10 + rand.Float64()*(0.50-0.10)
-		price := it.Price * (1.0 - discount)
-		stock := it.Stock - int32(rand.Intn(3))
-		if stock <= 0 {
-			stock = 1
-		}
-
-		offer := &proto.Offer{
-			OfertaId:   fmt.Sprintf("%d", time.Now().UnixNano()),
-			ProductoId: producerID,
-			Tienda:     "Parisio",
-			Categoria:  it.Category,
-			Producto:   it.Product,
-			Precio:     price,
-			Stock:      stock,
-			Fecha:      time.Now().Unix(),
-		}
-
-		resp, err := client.SendOffer(context.Background(), offer)
-		if err != nil {
-			log.Printf("Error al enviar oferta: %v", err)
-			continue
-		}
-		fmt.Printf("Oferta enviada: %s -> broker: %s\n", offer.OfertaId, resp.Mensaje)
+	// Retornar nuevo cliente
+	return &MRClient{
+		id:       id,
+		client:   cli,
+		flights:  flights,
+		versions: versions,
+		interval: interval,
 	}
 }
 
+// run inicia el ciclo de consultas periódicas al broker.
+func (m *MRClient) run() {
+	ticker := time.NewTicker(m.interval) // ticker para intervalos
+	defer ticker.Stop()                  // asegurar detener ticker al final
 
+	// Bucle infinito de consultas
+	for {
+
+		// Mezclar orden de vuelos para evitar patrones
+		rand.Shuffle(len(m.flights), func(i, j int) {
+			m.flights[i], m.flights[j] = m.flights[j], m.flights[i]
+		})
+
+		// Consultar estado de cada vuelo
+		for _, flight := range m.flights {
+			lastVer := m.versions[flight]                                           // última versión conocida
+			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second) // timeout
+			req := &flightpb.FlightRequest{FlightId: flight, LastVersion: lastVer}  // crear solicitud
+			resp, err := m.client.GetFlightStatus(ctx, req)                         // hacer llamada RPC
+			cancel()                                                                // cancelar contexto
+
+			// Manejar errores de consulta
+			if err != nil {
+				log.Printf("%s: error querying %s: %v", m.id, flight, err)
+				continue
+			}
+
+			// Procesar respuesta si hay nueva versión
+			if resp.Version >= lastVer {
+
+				// Actualizar estado si es nueva versión
+				if resp.Version > lastVer {
+					m.versions[flight] = resp.Version
+					log.Printf("%s: flight %s updated: state=%s version=%d", m.id, flight, resp.State, resp.Version)
+					// Versión igual, solo informar
+				} else {
+					log.Printf("%s: flight %s seen: state=%s version=%d", m.id, flight, resp.State, resp.Version)
+				}
+				// Ignorar versiones antiguas
+			} else {
+				log.Printf("%s: ignoring stale version for %s: got %d < known %d", m.id, flight, resp.Version, lastVer)
+			}
+		}
+		<-ticker.C // esperar siguiente tick
+	}
+}
+
+// inicia el cliente MR.
+func main() {
+
+	// Parsear flags de línea de comando
+	id := flag.String("id", "mr1", "identifier for this MR client")
+	brokerAddr := flag.String("broker", "localhost:6000", "broker gRPC endpoint (host:port)")
+	flightsFlag := flag.String("flights", "IB6833", "comma‑separated list of flight codes to observe")
+	intervalSec := flag.Int("interval", 5, "interval between successive queries (in seconds)")
+	flag.Parse()
+
+	flightList := make([]string, 0)
+
+	// Construir lista de vuelos desde flag
+	for _, f := range strings.Split(*flightsFlag, ",") {
+		f = strings.TrimSpace(f)
+		if f != "" {
+			flightList = append(flightList, f)
+		}
+	}
+
+	// Validar que haya vuelos especificados
+	if len(flightList) == 0 {
+		log.Fatal("no flights specified")
+	}
+
+	// Conectarse al broker
+	conn, err := grpc.Dial(*brokerAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		log.Fatalf("failed to connect to broker %s: %v", *brokerAddr, err)
+	}
+	defer conn.Close()
+
+	// Crear cliente MR y correrlo
+	cli := flightpb.NewInfoServiceClient(conn)
+	client := NewMRClient(*id, cli, flightList, time.Duration(*intervalSec)*time.Second)
+	log.Printf("MR client %s started, watching flights: %s", client.id, strings.Join(flightList, ", "))
+	client.run()
+}

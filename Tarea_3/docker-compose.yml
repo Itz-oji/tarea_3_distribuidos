@@ -5,6 +5,7 @@ services:
   # MV1
   # ====================
   ryw1:
+    image: tarea_3-ryw1
     build:
       context: .
       dockerfile: ./RYW1/Dockerfile.RYW1
@@ -20,6 +21,7 @@ services:
       - "52041:51000"
 
   MR1:
+    image: tarea_3-mr1
     build:
       context: .
       dockerfile: ./MR1/Dockerfile.MR1
@@ -38,6 +40,7 @@ services:
       - "52000:52000"
 
   datanode3:
+    image: tarea_3-datanode3
     build:
       context: .
       dockerfile: ./datanode3/Dockerfile.datanode3
@@ -49,6 +52,7 @@ services:
       - "57000:57000"
 
   broker:
+    image: tarea_3-broker
     build:
       context: .
       dockerfile: ./broker/Dockerfile.broker
@@ -66,6 +70,7 @@ services:
   # MV2
   # ====================
   RYW2:
+    image: tarea_3-ryw2
     build:
       context: .
       dockerfile: ./RYW2/Dockerfile.RYW2
@@ -78,6 +83,7 @@ services:
       - red_global
 
   MR2:
+    image: tarea_3-mr2
     build:
       context: .
       dockerfile: ./MR2/Dockerfile.MR2
@@ -91,6 +97,7 @@ services:
       - red_global
 
   consenso1:
+    image: tarea_3-consenso1
     build:
       context: .
       dockerfile: ./consenso1/Dockerfile.consenso1
@@ -106,9 +113,10 @@ services:
   # MV3
   # ====================
   RYW3:
+    image: tarea_3-ryw3
     build:
       context: .
-      dockerfile: ./RWY3/Dockerfile.RYW3
+      dockerfile: ./RYW3/Dockerfile.RYW3
     container_name: RYW3
     profiles: ["mv3"]
     environment:
@@ -120,6 +128,7 @@ services:
       - red_global
 
   datanode1:
+    image: tarea_3-datanode1
     build:
       context: .
       dockerfile: ./datanode1/Dockerfile.datanode1
@@ -131,6 +140,7 @@ services:
       - "58000:58000"
 
   consenso2:
+    image: tarea_3-consenso2
     build:
       context: .
       dockerfile: ./consenso2/Dockerfile.consenso2
@@ -149,6 +159,7 @@ services:
   # ====================
   
   coordinador:
+    image: tarea_3-coordinador
     build:
       context: .
       dockerfile: ./coordinador/Dockerfile.coordinador
@@ -163,6 +174,7 @@ services:
       - red_global
 
   datanode2:
+    image: tarea_3-datanode2
     build:
       context: .
       dockerfile: ./datanode2/Dockerfile.datanode2
@@ -174,6 +186,7 @@ services:
       - "59000:59000"
 
   consenso3:
+    image: tarea_3-consenso3
     build:
       context: .
       dockerfile: ./consenso3/Dockerfile.consenso3
