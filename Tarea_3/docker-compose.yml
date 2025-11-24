@@ -28,11 +28,6 @@ services:
     profiles: ["mv1"]
     environment:
       - NODE_ID=MR1
-      - GRPC_PORT=52000
-      - PEERS=10.35.168.59:51000,10.35.168.59:57000
-      - N=3
-      - W=2
-      - R=2
     networks:
       - red_global
     ports:
@@ -57,6 +52,8 @@ services:
       dockerfile: ./broker/Dockerfile.broker
     container_name: broker
     profiles: ["mv1"]
+    volumes:
+      - ./broker/flight_updates.csv:/flight_updates.csv  
     environment:
       - SERVICE_NAME=broker
       - GRPC_PORT=60000
@@ -96,6 +93,8 @@ services:
     restart: always
     networks:
       - red_global
+    ports:
+      - "52001:52001"
 
   consenso1:
     image: tarea_3-consenso1
@@ -148,7 +147,7 @@ services:
       context: .
       dockerfile: ./consenso2/Dockerfile.consenso2
     container_name: consenso2
-    profiles: ["mv2"]
+    profiles: ["mv3"]
     restart: always
     networks:
       - red_global
@@ -191,7 +190,7 @@ services:
       context: .
       dockerfile: ./consenso3/Dockerfile.consenso3
     container_name: consenso3
-    profiles: ["mv2"]
+    profiles: ["mv4"]
     restart: always
     networks:
       - red_global

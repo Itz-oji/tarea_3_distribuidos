@@ -3,11 +3,9 @@ package main
 import (
 	"context"
 	"log"
-	"math/rand"
 	"net"
 	"strconv"
 	"sync"
-	"time"
 
 	proto "heint/proto"
 
@@ -45,7 +43,7 @@ type DataNode struct {
 	id      string
 	mu      sync.Mutex
 	seats   map[string]SeatState
-	flights map[string]FlightState
+	flights map[string]FlightState // <--- soporte vuelos
 	peers   []string
 }
 
@@ -64,6 +62,7 @@ func mergeVC(a, b VectorClock) VectorClock {
 	return merged
 }
 
+// comparar relojes
 func compareVC(a, b VectorClock) (greater, less bool) {
 	keys := map[string]bool{}
 	for k := range a {
@@ -83,12 +82,12 @@ func compareVC(a, b VectorClock) (greater, less bool) {
 	return
 }
 
-// ----------------------- GENERAR MATRIZ A–F × 1–21 -----------------------
+// ----------------------- GENERAR MATRIZ A–F × 1–10 -----------------------
 
 func generateSeatMatrix() map[string]SeatState {
 	seats := make(map[string]SeatState)
 	for _, row := range []string{"A", "B", "C", "D", "E", "F"} {
-		for num := 1; num <= 21; num++ {
+		for num := 1; num <= 10; num++ {
 			seat := row + strconv.Itoa(num)
 			seats[seat] = SeatState{
 				Taken:    false,
@@ -165,7 +164,52 @@ func (d *DataNode) ObtenerEstado(ctx context.Context, req *proto.SolicitudEstado
 	}, nil
 }
 
-// ----------------------- REPLICAS REMOTAS (GOSSIP APPLY) -----------------------
+// ----------------------- ACTUALIZACIÓN DE VUELOS -----------------------
+
+func (d *DataNode) UpdateFlightState(ctx context.Context, req *proto.FlightUpdate) (*proto.Response, error) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	f, exists := d.flights[req.FlightId]
+	vcIn := VectorClock(req.GetVectorClock().GetClocks())
+	vcStored := f.Clock
+
+	if !exists {
+		vcStored = make(VectorClock)
+	}
+
+	isGreater, isLesser := compareVC(vcIn, vcStored)
+	apply := false
+
+	switch {
+	case !exists:
+		apply = true
+	case isGreater && !isLesser:
+		apply = true
+	}
+
+	if apply {
+		merged := mergeVC(vcIn, vcStored)
+		newState := f
+
+		if req.NewStatus != "" {
+			newState.Status = req.NewStatus
+		}
+		if req.NewGate != "" {
+			newState.Gate = req.NewGate
+		}
+		newState.AirlineID = req.AirlineId
+		newState.Clock = merged
+		d.flights[req.FlightId] = newState
+
+		log.Printf("[%s] ✈ Update vuelo %s => (%s, %s) VC=%v",
+			d.id, req.FlightId, newState.Status, newState.Gate, merged)
+	}
+
+	return &proto.Response{Mensaje: "OK", Ok: true}, nil
+}
+
+// ----------------------- REPLICAS REMOTAS (aplicar asiento de otro nodo) -----------------------
 
 func (d *DataNode) applyRemoteSeat(s *proto.SeatReplica) bool {
 	asiento := s.GetAsiento()
@@ -192,6 +236,35 @@ func (d *DataNode) applyRemoteSeat(s *proto.SeatReplica) bool {
 	return false
 }
 
+// ----------------------- CONSULTA DE VUELO -----------------------
+
+func (d *DataNode) ObtenerVuelo(ctx context.Context, req *proto.FlightRequest) (*proto.FlightResponse, error) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	f, exists := d.flights[req.FlightId]
+	if !exists {
+		return &proto.FlightResponse{
+			FlightId: req.FlightId,
+			State:    "UNKNOWN",
+			Version:  0,
+		}, nil
+	}
+
+	var v int32
+	for _, val := range f.Clock {
+		if val > v {
+			v = val
+		}
+	}
+
+	return &proto.FlightResponse{
+		FlightId: req.FlightId,
+		State:    f.Status + "@" + f.Gate,
+		Version:  int64(v),
+	}, nil
+}
+
 // ----------------------- GOSSIP -----------------------
 
 func (d *DataNode) Gossip(ctx context.Context, req *proto.GossipRequest) (*proto.GossipResponse, error) {
@@ -202,52 +275,6 @@ func (d *DataNode) Gossip(ctx context.Context, req *proto.GossipRequest) (*proto
 		_ = d.applyRemoteSeat(s)
 	}
 	return &proto.GossipResponse{}, nil
-}
-
-func (d *DataNode) startGossip() {
-	t := time.NewTicker(5 * time.Second)
-	for range t.C {
-		d.gossipOnce()
-	}
-}
-
-func (d *DataNode) gossipOnce() {
-	if len(d.peers) == 0 {
-		return
-	}
-	peer := d.peers[rand.Intn(len(d.peers))]
-	if peer == d.id {
-		return
-	}
-
-	conn, err := grpc.Dial(peer, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		return
-	}
-	defer conn.Close()
-
-	client := proto.NewDataNodeServiceClient(conn)
-
-	d.mu.Lock()
-	seatsCopy := d.copySeats()
-	d.mu.Unlock()
-
-	client.Gossip(context.Background(), &proto.GossipRequest{
-		Seats: seatsCopy,
-	})
-}
-
-func (d *DataNode) copySeats() []*proto.SeatReplica {
-	arr := []*proto.SeatReplica{}
-	for as, st := range d.seats {
-		arr = append(arr, &proto.SeatReplica{
-			Asiento:     as,
-			Taken:       st.Taken,
-			ClienteId:   st.ClientID,
-			VectorClock: &proto.VectorClock{Clocks: st.Clock},
-		})
-	}
-	return arr
 }
 
 // ----------------------- REGISTRO BROKER -----------------------
@@ -278,7 +305,6 @@ func main() {
 	proto.RegisterDataNodeServiceServer(server, datanode)
 
 	go registerWithBroker(MyNodeID)
-	go datanode.startGossip()
 
 	log.Println("Datanode listo:", MyNodeID)
 	server.Serve(lis)

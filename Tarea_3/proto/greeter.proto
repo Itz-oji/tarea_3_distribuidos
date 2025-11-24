@@ -110,6 +110,8 @@ service DataNodeService {
 
     // Sincronización periódica (Gossip)
     rpc Gossip (GossipRequest) returns (GossipResponse);
+
+    rpc ObtenerVuelo (FlightRequest) returns (FlightResponse);
 }
 
 // Broker registra nodos para balancear peticiones

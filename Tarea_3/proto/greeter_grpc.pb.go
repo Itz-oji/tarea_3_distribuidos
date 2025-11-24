@@ -281,6 +281,7 @@ const (
 	DataNodeService_EscribirReserva_FullMethodName   = "/heint.DataNodeService/EscribirReserva"
 	DataNodeService_UpdateFlightState_FullMethodName = "/heint.DataNodeService/UpdateFlightState"
 	DataNodeService_Gossip_FullMethodName            = "/heint.DataNodeService/Gossip"
+	DataNodeService_ObtenerVuelo_FullMethodName      = "/heint.DataNodeService/ObtenerVuelo"
 )
 
 // DataNodeServiceClient is the client API for DataNodeService service.
@@ -296,6 +297,7 @@ type DataNodeServiceClient interface {
 	UpdateFlightState(ctx context.Context, in *FlightUpdate, opts ...grpc.CallOption) (*Response, error)
 	// Sincronización periódica (Gossip)
 	Gossip(ctx context.Context, in *GossipRequest, opts ...grpc.CallOption) (*GossipResponse, error)
+	ObtenerVuelo(ctx context.Context, in *FlightRequest, opts ...grpc.CallOption) (*FlightResponse, error)
 }
 
 type dataNodeServiceClient struct {
@@ -346,6 +348,16 @@ func (c *dataNodeServiceClient) Gossip(ctx context.Context, in *GossipRequest, o
 	return out, nil
 }
 
+func (c *dataNodeServiceClient) ObtenerVuelo(ctx context.Context, in *FlightRequest, opts ...grpc.CallOption) (*FlightResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(FlightResponse)
+	err := c.cc.Invoke(ctx, DataNodeService_ObtenerVuelo_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // DataNodeServiceServer is the server API for DataNodeService service.
 // All implementations must embed UnimplementedDataNodeServiceServer
 // for forward compatibility.
@@ -359,6 +371,7 @@ type DataNodeServiceServer interface {
 	UpdateFlightState(context.Context, *FlightUpdate) (*Response, error)
 	// Sincronización periódica (Gossip)
 	Gossip(context.Context, *GossipRequest) (*GossipResponse, error)
+	ObtenerVuelo(context.Context, *FlightRequest) (*FlightResponse, error)
 	mustEmbedUnimplementedDataNodeServiceServer()
 }
 
@@ -380,6 +393,9 @@ func (UnimplementedDataNodeServiceServer) UpdateFlightState(context.Context, *Fl
 }
 func (UnimplementedDataNodeServiceServer) Gossip(context.Context, *GossipRequest) (*GossipResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Gossip not implemented")
+}
+func (UnimplementedDataNodeServiceServer) ObtenerVuelo(context.Context, *FlightRequest) (*FlightResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ObtenerVuelo not implemented")
 }
 func (UnimplementedDataNodeServiceServer) mustEmbedUnimplementedDataNodeServiceServer() {}
 func (UnimplementedDataNodeServiceServer) testEmbeddedByValue()                         {}
@@ -474,6 +490,24 @@ func _DataNodeService_Gossip_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _DataNodeService_ObtenerVuelo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(FlightRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DataNodeServiceServer).ObtenerVuelo(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DataNodeService_ObtenerVuelo_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DataNodeServiceServer).ObtenerVuelo(ctx, req.(*FlightRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // DataNodeService_ServiceDesc is the grpc.ServiceDesc for DataNodeService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -496,6 +530,10 @@ var DataNodeService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Gossip",
 			Handler:    _DataNodeService_Gossip_Handler,
+		},
+		{
+			MethodName: "ObtenerVuelo",
+			Handler:    _DataNodeService_ObtenerVuelo_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

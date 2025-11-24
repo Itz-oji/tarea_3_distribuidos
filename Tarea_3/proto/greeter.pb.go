@@ -1430,12 +1430,13 @@ const file_proto_greeter_proto_rawDesc = "" +
 	"SendEstado\x12\x0f.heint.Response\x1a\r.heint.Estado\x124\n" +
 	"\vSendReserva\x12\x14.heint.AsientoSelect\x1a\x0f.heint.Response\x122\n" +
 	"\vSendBaggage\x12\x12.heint.FactBaggage\x1a\x0f.heint.Response\x12Q\n" +
-	"\x18ObtenerEstadoYAsignacion\x12\x16.heint.SolicitudEstado\x1a\x1d.heint.ResponseEstadoAsignado2\x85\x02\n" +
+	"\x18ObtenerEstadoYAsignacion\x12\x16.heint.SolicitudEstado\x1a\x1d.heint.ResponseEstadoAsignado2\xc2\x02\n" +
 	"\x0fDataNodeService\x12F\n" +
 	"\rObtenerEstado\x12\x16.heint.SolicitudEstado\x1a\x1d.heint.ResponseEstadoAsignado\x128\n" +
 	"\x0fEscribirReserva\x12\x14.heint.AsientoSelect\x1a\x0f.heint.Response\x129\n" +
 	"\x11UpdateFlightState\x12\x13.heint.FlightUpdate\x1a\x0f.heint.Response\x125\n" +
-	"\x06Gossip\x12\x14.heint.GossipRequest\x1a\x15.heint.GossipResponse2\xa7\x01\n" +
+	"\x06Gossip\x12\x14.heint.GossipRequest\x1a\x15.heint.GossipResponse\x12;\n" +
+	"\fObtenerVuelo\x12\x14.heint.FlightRequest\x1a\x15.heint.FlightResponse2\xa7\x01\n" +
 	"\x10AsignadorService\x12@\n" +
 	"\x0fAsignarDataNode\x12\x15.heint.RequestAsignar\x1a\x16.heint.ResponseAsignar\x12Q\n" +
 	"\x18ObtenerEstadoYAsignacion\x12\x16.heint.SolicitudEstado\x1a\x1d.heint.ResponseEstadoAsignado2\xb4\x01\n" +
@@ -1507,29 +1508,31 @@ var file_proto_greeter_proto_depIdxs = []int32{
 	1,  // 16: heint.DataNodeService.EscribirReserva:input_type -> heint.AsientoSelect
 	3,  // 17: heint.DataNodeService.UpdateFlightState:input_type -> heint.FlightUpdate
 	5,  // 18: heint.DataNodeService.Gossip:input_type -> heint.GossipRequest
-	9,  // 19: heint.AsignadorService.AsignarDataNode:input_type -> heint.RequestAsignar
-	8,  // 20: heint.AsignadorService.ObtenerEstadoYAsignacion:input_type -> heint.SolicitudEstado
-	14, // 21: heint.Consensus.RequestVote:input_type -> heint.VoteRequest
-	17, // 22: heint.Consensus.AppendEntries:input_type -> heint.AppendRequest
-	19, // 23: heint.Consensus.Propose:input_type -> heint.Proposal
-	21, // 24: heint.InfoService.GetFlightStatus:input_type -> heint.FlightRequest
-	0,  // 25: heint.BrokerService.SendOffer:output_type -> heint.Response
-	12, // 26: heint.BrokerService.SendEstado:output_type -> heint.Estado
-	0,  // 27: heint.BrokerService.SendReserva:output_type -> heint.Response
-	0,  // 28: heint.BrokerService.SendBaggage:output_type -> heint.Response
-	11, // 29: heint.BrokerService.ObtenerEstadoYAsignacion:output_type -> heint.ResponseEstadoAsignado
-	11, // 30: heint.DataNodeService.ObtenerEstado:output_type -> heint.ResponseEstadoAsignado
-	0,  // 31: heint.DataNodeService.EscribirReserva:output_type -> heint.Response
-	0,  // 32: heint.DataNodeService.UpdateFlightState:output_type -> heint.Response
-	6,  // 33: heint.DataNodeService.Gossip:output_type -> heint.GossipResponse
-	10, // 34: heint.AsignadorService.AsignarDataNode:output_type -> heint.ResponseAsignar
-	11, // 35: heint.AsignadorService.ObtenerEstadoYAsignacion:output_type -> heint.ResponseEstadoAsignado
-	15, // 36: heint.Consensus.RequestVote:output_type -> heint.VoteResponse
-	18, // 37: heint.Consensus.AppendEntries:output_type -> heint.AppendResponse
-	20, // 38: heint.Consensus.Propose:output_type -> heint.ConsensusReply
-	22, // 39: heint.InfoService.GetFlightStatus:output_type -> heint.FlightResponse
-	25, // [25:40] is the sub-list for method output_type
-	10, // [10:25] is the sub-list for method input_type
+	21, // 19: heint.DataNodeService.ObtenerVuelo:input_type -> heint.FlightRequest
+	9,  // 20: heint.AsignadorService.AsignarDataNode:input_type -> heint.RequestAsignar
+	8,  // 21: heint.AsignadorService.ObtenerEstadoYAsignacion:input_type -> heint.SolicitudEstado
+	14, // 22: heint.Consensus.RequestVote:input_type -> heint.VoteRequest
+	17, // 23: heint.Consensus.AppendEntries:input_type -> heint.AppendRequest
+	19, // 24: heint.Consensus.Propose:input_type -> heint.Proposal
+	21, // 25: heint.InfoService.GetFlightStatus:input_type -> heint.FlightRequest
+	0,  // 26: heint.BrokerService.SendOffer:output_type -> heint.Response
+	12, // 27: heint.BrokerService.SendEstado:output_type -> heint.Estado
+	0,  // 28: heint.BrokerService.SendReserva:output_type -> heint.Response
+	0,  // 29: heint.BrokerService.SendBaggage:output_type -> heint.Response
+	11, // 30: heint.BrokerService.ObtenerEstadoYAsignacion:output_type -> heint.ResponseEstadoAsignado
+	11, // 31: heint.DataNodeService.ObtenerEstado:output_type -> heint.ResponseEstadoAsignado
+	0,  // 32: heint.DataNodeService.EscribirReserva:output_type -> heint.Response
+	0,  // 33: heint.DataNodeService.UpdateFlightState:output_type -> heint.Response
+	6,  // 34: heint.DataNodeService.Gossip:output_type -> heint.GossipResponse
+	22, // 35: heint.DataNodeService.ObtenerVuelo:output_type -> heint.FlightResponse
+	10, // 36: heint.AsignadorService.AsignarDataNode:output_type -> heint.ResponseAsignar
+	11, // 37: heint.AsignadorService.ObtenerEstadoYAsignacion:output_type -> heint.ResponseEstadoAsignado
+	15, // 38: heint.Consensus.RequestVote:output_type -> heint.VoteResponse
+	18, // 39: heint.Consensus.AppendEntries:output_type -> heint.AppendResponse
+	20, // 40: heint.Consensus.Propose:output_type -> heint.ConsensusReply
+	22, // 41: heint.InfoService.GetFlightStatus:output_type -> heint.FlightResponse
+	26, // [26:42] is the sub-list for method output_type
+	10, // [10:26] is the sub-list for method input_type
 	10, // [10:10] is the sub-list for extension type_name
 	10, // [10:10] is the sub-list for extension extendee
 	0,  // [0:10] is the sub-list for field type_name
