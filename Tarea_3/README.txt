@@ -21,5 +21,5 @@ Cosas a considerar del codigo:
 
 Supuestos utilizados:
 * Los asientos de los aviones van de la letra A a la F. Y de los numeros 1 al 10.
-* Existen solo 2 pistas para los aviones y estan son asignadas una vez llega un avion.
+* La asignación de pistas ocurre cuando los aviones están en estado "En vuelo" o "Embarcando"
 
