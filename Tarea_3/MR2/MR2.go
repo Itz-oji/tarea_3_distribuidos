@@ -73,7 +73,7 @@ func (c *MRClient) ConsultarVuelo(flightID string) bool {
 // ================= MAIN ==============================
 
 func main() {
-	clienteMR := NewMRClient("MR1", "broker:60000")
+	clienteMR := NewMRClient("MR2", "broker:60000")
 
 	for {
 		clienteMR.ConsultarVuelo("AF-021")
