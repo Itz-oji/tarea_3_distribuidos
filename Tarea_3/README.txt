@@ -17,7 +17,9 @@ En caso de error ejecutar el comando make docker-restart
 
 Cosas a considerar del codigo:
 * En el caso de un conflicto entre datanodes, la metodologia de resolucion que se ultilizo fue el de mayor id lexicograficamente. Por ejemplo clienteB>clienteA, entonces se queda la info del clienteB.
+*En el caso de los vuelos se aplica el criterio de prioridad entre los estados CANCELADO (3) > RETRASADO (2) > OTROS (1), si son los mismos estados, se desempata con id de las aerolineas donde la de mayor lexicografia gana.
 
 Supuestos utilizados:
 * Los asientos de los aviones van de la letra A a la F. Y de los numeros 1 al 10.
 * Existen solo 2 pistas para los aviones y estan son asignadas una vez llega un avion.
+
