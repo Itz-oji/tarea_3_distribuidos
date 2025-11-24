@@ -15,9 +15,9 @@ import (
 )
 
 const (
-	MyNodeID     = "datanode1:58000"
+	MyNodeID     = "datanode1:10.35.168.61:58000"
 	DatanodePort = ":58000"
-	BrokerAddr   = "broker:60000"
+	BrokerAddr   = "broker:10.35.168.61:60000"
 )
 
 type VectorClock map[string]int32
@@ -344,7 +344,7 @@ func main() {
 		id:      MyNodeID,
 		seats:   generateSeatMatrix(),
 		flights: map[string]FlightState{},
-		peers:   []string{"datanode1:58000", "datanode2:59000", "datanode3:57000"},
+		peers:   []string{"datanode1:10.35.168.61:58000", "datanode2:10.35.168.62:59000", "datanode3:10.35.168.59:57000"},
 	}
 
 	proto.RegisterDataNodeServiceServer(server, datanode)
