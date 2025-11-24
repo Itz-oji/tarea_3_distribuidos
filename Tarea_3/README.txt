@@ -15,5 +15,9 @@ dist052: make docker-mv4
 
 En caso de error ejecutar el comando make docker-restart
 
-En el caso de un conflicto entre datanodes, la metodologia de resolucion que se ultilizo fue el de mayor id lexicograficamente. Por ejemplo clienteB>clienteA, entonces se queda la info del clienteB.
+Cosas a considerar del codigo:
+* En el caso de un conflicto entre datanodes, la metodologia de resolucion que se ultilizo fue el de mayor id lexicograficamente. Por ejemplo clienteB>clienteA, entonces se queda la info del clienteB.
 
+Supuestos utilizados:
+* Los asientos de los aviones van de la letra A a la F. Y de los numeros 1 al 10.
+* Existen solo 2 pistas para los aviones y estan son asignadas una vez llega un avion.
