@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/csv"
+	"fmt"
 	"log"
 	"net"
 	"os"
@@ -26,6 +27,15 @@ type Broker struct {
 	mu        sync.Mutex // protege rrIndex
 	datanodes []string   // direcciones de datanodes
 	rrIndex   int        // índice para round-robin
+
+	runways   []string          // nombres de las pistas disponibles
+	assigned  map[string]string // vuelo → pista asignada
+	free      map[string]bool   // pista → true si está libre
+	runwaysMu sync.Mutex        // protege assigned/free
+
+	consensus []string
+
+	reportMu sync.Mutex
 }
 
 // Servicio para Monotonic Reads
@@ -218,6 +228,110 @@ func (b *Broker) broadcastFlightUpdate(u *proto.FlightUpdate) {
 	}
 }
 
+// ==================== CONSENSO PARA ASIGNACIONES ====================
+
+func (b *Broker) proposeCommand(cmd string) bool {
+	for _, addr := range b.consensus {
+		conn, err := grpc.Dial(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		if err != nil {
+			log.Printf("[BROKER] Error conectando a nodo de consenso %s: %v", addr, err)
+			continue
+		}
+		client := proto.NewConsensusClient(conn)
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		resp, err := client.Propose(ctx, &proto.Proposal{Command: cmd})
+		cancel()
+		conn.Close()
+		if err != nil {
+			log.Printf("[BROKER] Error proponiendo en %s: %v", addr, err)
+			continue
+		}
+		// Si el líder aceptó y replicó la propuesta, devolvemos éxito
+		if resp.GetSuccess() {
+			return true
+		}
+		// Si la propuesta no fue aceptada, probamos con el siguiente nodo
+		log.Printf("[BROKER] Propuesta '%s' rechazada por %s: %s", cmd, addr, resp.GetResult())
+	}
+	log.Printf("[BROKER] No se logró consenso para el comando: %s", cmd)
+	return false
+}
+
+func (b *Broker) assignRunway(flightID string) {
+	// Verificar si ya tiene una pista asignada
+	b.runwaysMu.Lock()
+	if _, exists := b.assigned[flightID]; exists {
+		b.runwaysMu.Unlock()
+		return
+	}
+	// Elegir una pista libre
+	var runway string
+	for _, r := range b.runways {
+		if free, ok := b.free[r]; ok && free {
+			runway = r
+			break
+		}
+	}
+	b.runwaysMu.Unlock()
+	if runway == "" {
+		log.Printf("[BROKER] No hay pistas disponibles para el vuelo %s", flightID)
+		return
+	}
+	// Proponer asignación vía consenso
+	cmd := fmt.Sprintf("assign_runway:%s:%s", runway, flightID)
+	if b.proposeCommand(cmd) {
+		// Actualizar estado local
+		b.runwaysMu.Lock()
+		b.assigned[flightID] = runway
+		b.free[runway] = false
+		b.runwaysMu.Unlock()
+
+		// Registrar en reporte
+		b.appendReport(flightID, runway)
+		log.Printf("[BROKER] Pista %s asignada a vuelo %s", runway, flightID)
+	} else {
+		log.Printf("[BROKER] Falló la asignación consensuada de pista %s para vuelo %s", runway, flightID)
+	}
+}
+
+func (b *Broker) releaseRunway(flightID string) {
+	b.runwaysMu.Lock()
+	runway, ok := b.assigned[flightID]
+	if !ok {
+		b.runwaysMu.Unlock()
+		return
+	}
+	// Marcar pista como libre y eliminar asignación
+	delete(b.assigned, flightID)
+	b.free[runway] = true
+	b.runwaysMu.Unlock()
+	// Proponer liberación vía consenso
+	cmd := fmt.Sprintf("release_runway:%s:%s", runway, flightID)
+	if b.proposeCommand(cmd) {
+		log.Printf("[BROKER] Pista %s liberada por vuelo %s", runway, flightID)
+	} else {
+		log.Printf("[BROKER] Falló la liberación consensuada de pista %s para vuelo %s", runway, flightID)
+	}
+}
+
+// appendReport agrega una línea al archivo report.txt con la
+// asignación de pista realizada. El formato es "flightID,runway,timestamp".
+func (b *Broker) appendReport(flightID, runway string) {
+	b.reportMu.Lock()
+	defer b.reportMu.Unlock()
+	f, err := os.OpenFile("/report.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		log.Printf("[BROKER] Error abriendo/creando report.txt: %v", err)
+		return
+	}
+	defer f.Close()
+	timestamp := time.Now().Format(time.RFC3339)
+	line := fmt.Sprintf("%s,%s,%s\n", flightID, runway, timestamp)
+	if _, err := f.WriteString(line); err != nil {
+		log.Printf("[BROKER] Error escribiendo en report.txt: %v", err)
+	}
+}
+
 // ==================== SIMULACIÓN DE ACTUALIZACIONES DESDE CSV ====================
 // Reloj interno: cada segundo currentSec++
 // Si existe algún evento con TimeSec == currentSec → se hace broadcast
@@ -268,6 +382,23 @@ func (b *Broker) startFlightUpdates() {
 			)
 
 			b.broadcastFlightUpdate(ev.Update)
+
+			// Según el estado del vuelo, decidir si asignar o liberar una pista.  La
+			// asignación se solicita cuando el vuelo está en "En vuelo" (aterrizaje)
+			// o "Embarcando" (despegue).  La liberación ocurre cuando el vuelo
+			// llega a destino o se cancela.  Se ignoran otros estados.
+			status := ev.Update.NewStatus
+			if status != "" {
+				// Comparaciones insensibles a mayúsculas
+				if strings.EqualFold(status, "En vuelo") || strings.EqualFold(status, "Embarcando") {
+					// Lanzar asignación en goroutine para no bloquear el bucle
+					go b.assignRunway(ev.Update.FlightId)
+				} else if strings.EqualFold(status, "Llegó") || strings.EqualFold(status, "Cancelado") {
+					// Liberar la pista si aplica
+					go b.releaseRunway(ev.Update.FlightId)
+				}
+			}
+
 			idx++
 		}
 
@@ -339,6 +470,7 @@ func main() {
 	}
 
 	// Inicializar broker con datanodes conocidos
+	// Inicializar broker con datanodes conocidos, pistas y nodos de consenso.
 	broker := &Broker{
 		datanodes: []string{
 			"datanode1:58000",
@@ -346,6 +478,21 @@ func main() {
 			"datanode3:57000",
 		},
 		rrIndex: 0,
+		// Configurar pistas disponibles.  Estas son los recursos
+		// críticos cuya asignación se decide mediante consenso.  Si
+		// deseas más o menos pistas puedes modificar este slice.
+		runways:  []string{"Pista01", "Pista02", "Pista03"},
+		assigned: make(map[string]string),
+		free: map[string]bool{
+			"Pista01": true,
+			"Pista02": true,
+			"Pista03": true,
+		},
+		consensus: []string{
+			"consenso1:57770",
+			"consenso2:57771",
+			"consenso3:57772",
+		},
 	}
 
 	server := grpc.NewServer()

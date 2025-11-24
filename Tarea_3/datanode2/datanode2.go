@@ -5,6 +5,7 @@ import (
 	"log"
 	"net"
 	"strconv"
+	"strings"
 	"sync"
 
 	proto "heint/proto"
@@ -90,7 +91,7 @@ func statusPriority(status string) int {
 	case "RETRASADO":
 		return 2
 	default:
-		return 1 
+		return 1
 	}
 }
 
@@ -333,7 +334,6 @@ func registerWithBroker(id string) {
 	}
 }
 
-
 // ----------------------- MAIN -----------------------
 
 func main() {
@@ -354,4 +354,3 @@ func main() {
 	log.Println("Datanode listo:", MyNodeID)
 	server.Serve(lis)
 }
-
