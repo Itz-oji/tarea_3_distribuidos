@@ -82,6 +82,18 @@ func compareVC(a, b VectorClock) (greater, less bool) {
 	return
 }
 
+func statusPriority(status string) int {
+	s := strings.ToUpper(strings.TrimSpace(status))
+	switch s {
+	case "CANCELADO":
+		return 3
+	case "RETRASADO":
+		return 2
+	default:
+		return 1 
+	}
+}
+
 // ----------------------- GENERAR MATRIZ A–F × 1–10 -----------------------
 
 func generateSeatMatrix() map[string]SeatState {
@@ -173,8 +185,10 @@ func (d *DataNode) UpdateFlightState(ctx context.Context, req *proto.FlightUpdat
 	f, exists := d.flights[req.FlightId]
 	vcIn := VectorClock(req.GetVectorClock().GetClocks())
 	vcStored := f.Clock
+	airlineIn := req.AirlineId
 
 	if !exists {
+		// Asignar un VC vacío para el merge inicial si el vuelo no existe
 		vcStored = make(VectorClock)
 	}
 
@@ -186,6 +200,33 @@ func (d *DataNode) UpdateFlightState(ctx context.Context, req *proto.FlightUpdat
 		apply = true
 	case isGreater && !isLesser:
 		apply = true
+	case !isGreater && isLesser:
+		apply = false
+	case isGreater && isLesser:
+		log.Printf("[%s] ⚠️ Conflicto concurrente en vuelo %s. Resolviendo...", d.id, req.FlightId)
+
+		pIn := statusPriority(req.NewStatus)
+		pStored := statusPriority(f.Status)
+
+		if pIn > pStored {
+			log.Printf("[%s] Conflicto resuelto: Prioridad de estado entrante (%s vs %s) gana.", d.id, req.NewStatus, f.Status)
+			apply = true
+		} else if pIn < pStored {
+			log.Printf("[%s] Conflicto resuelto: Prioridad de estado almacenado (%s vs %s) gana.", d.id, f.Status, req.NewStatus)
+			apply = false
+		} else {
+			if airlineIn > f.AirlineID {
+				// El ID de aerolínea entrante gana (ej: LAN > AER).
+				log.Printf("[%s] Conflicto resuelto: Desempate por Airline ID entrante (%s vs %s) gana.", d.id, airlineIn, f.AirlineID)
+				apply = true
+			} else {
+				log.Printf("[%s] Conflicto resuelto: Desempate por Airline ID almacenado (%s vs %s) gana.", d.id, f.AirlineID, airlineIn)
+				apply = false
+			}
+		}
+	default:
+		// Caso final: VCs idénticos, o (isGreater=false && isLesser=false), ignorar.
+		apply = false
 	}
 
 	if apply {
@@ -198,12 +239,15 @@ func (d *DataNode) UpdateFlightState(ctx context.Context, req *proto.FlightUpdat
 		if req.NewGate != "" {
 			newState.Gate = req.NewGate
 		}
+
 		newState.AirlineID = req.AirlineId
 		newState.Clock = merged
 		d.flights[req.FlightId] = newState
 
-		log.Printf("[%s] ✈ Update vuelo %s => (%s, %s) VC=%v",
+		log.Printf("[%s] ✈ Update vuelo %s APLICADO => (Status: %s, Gate: %s) VC=%v",
 			d.id, req.FlightId, newState.Status, newState.Gate, merged)
+	} else {
+		log.Printf("[%s] ✈ Update vuelo %s IGNORADO (Orden Causal o Política de Resolución)", d.id, req.FlightId)
 	}
 
 	return &proto.Response{Mensaje: "OK", Ok: true}, nil
@@ -289,6 +333,7 @@ func registerWithBroker(id string) {
 	}
 }
 
+
 // ----------------------- MAIN -----------------------
 
 func main() {
@@ -309,3 +354,4 @@ func main() {
 	log.Println("Datanode listo:", MyNodeID)
 	server.Serve(lis)
 }
+
